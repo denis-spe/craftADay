@@ -1,0 +1,3 @@
+- [x] Add Hilt testing dependencies to `app/build.gradle.kts`
+- [x] Fix missing imports and activity reference in `LandingScreenTest.kt`
+- [x] Verify build and test compilation

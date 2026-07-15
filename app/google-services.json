@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "791620110929",
+    "project_id": "craftaday",
+    "storage_bucket": "craftaday.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:791620110929:android:701dedb6e5041f9f960670",
+        "android_client_info": {
+          "package_name": "com.den.craftaday"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "791620110929-2rpg1k79pps03jfp1k7b8sbf796hakea.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.den.craftaday",
+            "certificate_hash": "e1fc737d70a169a66f8b9b50b266ae168e501368"
+          }
+        },
+        {
+          "client_id": "791620110929-k6me11qftqn0uoaa1ht2l7om5pkvcfmf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRe-NIGcuHOGrQJ-nR3ylErM2v4wI5cdM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "791620110929-k6me11qftqn0uoaa1ht2l7om5pkvcfmf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
