@@ -1,3 +1,4 @@
-- [x] Add Hilt testing dependencies to `app/build.gradle.kts`
-- [x] Fix missing imports and activity reference in `LandingScreenTest.kt`
-- [x] Verify build and test compilation
+- [ ] Update `firebase.json` to use `host: "0.0.0.0"`
+- [ ] Uncomment and fix Auth emulator connection in `FirebaseModule.kt`
+- [ ] Clean up Firestore provider in `FirebaseModule.kt`
+- [ ] Verify anonymous user creation in emulator UI

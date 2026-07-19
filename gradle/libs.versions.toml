@@ -1,6 +1,8 @@
 [versions]
 agp = "9.2.1"
 coreKtx = "1.19.0"
+coreSplashscreen = "1.0.1"
+datastorePreferences = "1.2.1"
 firebaseBom = "34.16.0"
 hiltAndroidCompilerVersion = "2.60.1"
 hiltAndroidTesting = "2.60.1"
@@ -24,9 +26,13 @@ firebaseUiAuth = "9.1.1"
 credentials = "1.6.0"
 googleid = "1.2.0"
 hiltWork = "1.4.0"
+coil = "3.5.0"
 
 [libraries]
+androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 androidx-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 dagger-hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroidCompilerVersion" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
@@ -69,6 +75,8 @@ hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt"
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version = "1.4.0" }
 androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltWork" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

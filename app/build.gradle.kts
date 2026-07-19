@@ -24,9 +24,19 @@ android {
 
     buildTypes {
         release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             optimization {
                 enable = false
             }
+        }
+
+        debug {
+            isMinifyEnabled = false
         }
     }
     compileOptions {
@@ -35,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true // Add this line
     }
 }
 
@@ -46,6 +57,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     testImplementation(libs.junit)
@@ -105,4 +117,16 @@ dependencies {
 
     // Compose UI test rule.
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // DataStore ->
+    implementation(libs.androidx.datastore.preferences)
+
+    // Material icons ->
+    implementation(libs.androidx.compose.material.icons.extended)
+
+    // Coil ->
+    // Coil Core Compose implementation
+    implementation(libs.coil.compose)
+    // Network factory integration required by Coil 3 to fetch remote URLs
+    implementation(libs.coil.network)
 }

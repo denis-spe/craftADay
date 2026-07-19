@@ -11,5 +11,6 @@ And planning of project
 - ~~Created a welcome screen test file~~ - 14 Jul 2026
 
 ## **Day 2**
+- A Screen manager for connecting screens - 15 Jul 2026
 - Construct a welcome screen - 15 Jul 2026
 - Test the welcome screen - 15 Jul 2026

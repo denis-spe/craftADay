@@ -1,0 +1,45 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background: rounded square, indigo -->
+    <path
+        android:fillColor="#5C6BC0"
+        android:pathData="M24,0 L84,0 A24,24 0 0,1 108,24 L108,84 A24,24 0 0,1 84,108 L24,108 A24,24 0 0,1 0,84 L0,24 A24,24 0 0,1 24,0 Z"/>
+
+    <!-- Day card -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,22 L76,22 A8,8 0 0,1 84,30 L84,78 A8,8 0 0,1 76,86 L32,86 A8,8 0 0,1 24,78 L24,30 A8,8 0 0,1 32,22 Z"/>
+
+    <!-- Checklist bars (task rows) -->
+    <path android:fillColor="#37474F" android:pathData="M32,44 L64,44 L64,50 L32,50 Z"/>
+    <path android:fillColor="#F4A261" android:pathData="M32,58 L68,58 L68,64 L32,64 Z"/>
+    <path android:fillColor="#2A9D8F" android:pathData="M32,72 L58,72 L58,78 L32,78 Z"/>
+
+    <!-- Completed-task badge -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M78,30 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0"/>
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M73,30 L77,34 L84,24"/>
+
+    <!-- Pencil, laid diagonally across the card -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="-45">
+        <path android:fillColor="#F2A6B7" android:pathData="M0,48 L10,48 L10,60 L0,60 Z"/>
+        <path android:fillColor="#C9CDD3" android:pathData="M10,48 L16,48 L16,60 L10,60 Z"/>
+        <path android:fillColor="#FFC94D" android:pathData="M16,48 L64,48 L64,60 L16,60 Z"/>
+        <path android:fillColor="#D9A066" android:pathData="M64,48 L64,60 L78,57 L78,51 Z"/>
+        <path android:fillColor="#263238" android:pathData="M78,51 L78,57 L88,54 Z"/>
+    </group>
+
+</vector>

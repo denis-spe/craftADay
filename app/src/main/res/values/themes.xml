@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Base application theme. -->
+    <style name="Theme.CraftADay" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="android:windowBackground">@color/app_start_color</item>
+        <item name="android:statusBarColor">@color/app_start_color</item>
+    </style>
 
-    <style name="Theme.CraftADay" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Splash Screen theme. -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/app_start_color</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/menu_icon</item>
+        <item name="postSplashScreenTheme">@style/Theme.CraftADay</item>
+    </style>
 </resources>
