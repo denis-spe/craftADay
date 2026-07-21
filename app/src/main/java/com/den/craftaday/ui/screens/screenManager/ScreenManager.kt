@@ -2,21 +2,14 @@
 package com.den.craftaday.ui.screens.screenManager
 
 import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -29,15 +22,27 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.den.craftaday.backend.states.AuthState
+import com.den.craftaday.backend.viewModels.HomeViewModel
+import com.den.craftaday.backend.viewModels.RegisterViewModel
 import com.den.craftaday.backend.viewModels.ScreenManagerViewModel
+import com.den.craftaday.backend.viewModels.SettingsViewModel
+import com.den.craftaday.backend.viewModels.WelcomeViewModel
 import com.den.craftaday.ui.screens.homeScreen.HomeScreen
 import com.den.craftaday.ui.screens.loadingScreen.LoadingScreen
 import com.den.craftaday.ui.screens.loginScreen.LoginScreen
-import com.den.craftaday.ui.screens.registerScreen.RegisterScreen
+import com.den.craftaday.ui.screens.registerScreen.EmailScreen
+import com.den.craftaday.ui.screens.registerScreen.NameScreen
+import com.den.craftaday.ui.screens.registerScreen.PasswordScreen
 import com.den.craftaday.ui.screens.settingsScreen.SettingsScreen
 import com.den.craftaday.ui.screens.welcomeScreen.WelcomeScreen
 
-fun EntryProviderScope<NavKey>.featureAEntryBuilder(backStack: NavBackStack<NavKey>) {
+fun EntryProviderScope<NavKey>.featureAEntryBuilder(
+    backStack: NavBackStack<NavKey>,
+    registerViewModel: RegisterViewModel,
+    welcomeViewModel: WelcomeViewModel,
+    settingsViewModel: SettingsViewModel,
+    homeViewModel: HomeViewModel,
+) {
     // ===== Welcome Screen =====
     entry<WelcomeRouter>(
         metadata = metadata {
@@ -66,12 +71,34 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(backStack: NavBackStack<NavK
             }
         }
     ) {
-        WelcomeScreen(backStack = backStack)
+        WelcomeScreen(
+            backStack = backStack,
+            viewModel = welcomeViewModel
+        )
     }
 
-    // ===== Register Screen =====
-    entry<RegisterRouter> {
-        RegisterScreen(backStack = backStack)
+    // ===== Email Screen =====
+    entry<EmailRouter> {
+        EmailScreen(
+            backStack = backStack,
+            registerViewModel = registerViewModel
+        )
+    }
+
+    // ===== Name Screen =====
+    entry<NameRouter> {
+        NameScreen(
+            backStack = backStack,
+            registerViewModel = registerViewModel
+        )
+    }
+
+    // ===== Password Screen =====
+    entry<PasswordRouter> {
+        PasswordScreen(
+            backStack = backStack,
+            registerViewModel = registerViewModel
+        )
     }
 
     // ===== Login Screen =====
@@ -81,20 +108,32 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(backStack: NavBackStack<NavK
 
     // ===== Home Screen =====
     entry<HomeRouter> {
-        HomeScreen(it.userId, backStack = backStack)
+        HomeScreen(
+            it.userId,
+            backStack = backStack,
+            homeViewModel = homeViewModel
+        )
     }
 
     // ===== Settings Screen =====
     entry<SettingsRouter> {
-        SettingsScreen(backStack = backStack)
+        SettingsScreen(
+            backStack = backStack,
+            settingsViewModel = settingsViewModel
+        )
     }
 }
 
 @Composable
 fun ScreenManager() {
-    // 1. Instantiate the ScreenManagerViewModel
+    // 1. Instantiate the viewModel
     val viewModel: ScreenManagerViewModel = hiltViewModel()
+    val registerViewModel: RegisterViewModel = hiltViewModel()
+    val welcomeViewModel: WelcomeViewModel = hiltViewModel()
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
+    val homeViewModel: HomeViewModel = hiltViewModel()
 
+    // 2. Observe the userState
     val userState by viewModel.userState.collectAsStateWithLifecycle()
 
     if (userState is AuthState.Loading) {
@@ -127,7 +166,13 @@ fun ScreenManager() {
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },
         entryProvider = entryProvider {
-            featureAEntryBuilder(backStack = backStack)
+            featureAEntryBuilder(
+                backStack = backStack,
+                registerViewModel = registerViewModel,
+                welcomeViewModel = welcomeViewModel,
+                settingsViewModel = settingsViewModel,
+                homeViewModel = homeViewModel
+            )
         },
         transitionSpec = {
             // Slide in from right when navigating forward

@@ -46,6 +46,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.den.craftaday.R
 import com.den.craftaday.backend.states.AuthState
+import com.den.craftaday.backend.viewModels.ScreenManagerViewModel
 import com.den.craftaday.backend.viewModels.SettingsViewModel
 import com.den.craftaday.ui.screens.HORIZONTAL_PADDING
 import com.den.craftaday.ui.screens.screenManager.WelcomeRouter
@@ -53,11 +54,9 @@ import com.den.craftaday.ui.theme.ExtendedTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(backStack: NavBackStack<NavKey>) {
-    // ViewModel injection
-    val viewModel: SettingsViewModel = hiltViewModel()
-
-    val user by viewModel.userState.collectAsStateWithLifecycle()
+fun SettingsScreen(backStack: NavBackStack<NavKey>, settingsViewModel: SettingsViewModel) {
+    // User state management
+    val user by settingsViewModel.userState.collectAsStateWithLifecycle()
 
     when(user) {
         is AuthState.Authenticated -> {}
@@ -98,7 +97,7 @@ fun SettingsScreen(backStack: NavBackStack<NavKey>) {
         ) {
             item {
                 UserSection(user = user) {
-                    viewModel.logout()
+                    settingsViewModel.logout()
                 }
             }
         }

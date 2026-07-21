@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,41 +19,63 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.den.craftaday.ui.theme.CraftADayTheme
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.rememberNavBackStack
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.viewModels.WelcomeViewModel
 import com.den.craftaday.ui.screens.AUTH_BUTTON_VERTICAL_SPACE
 import com.den.craftaday.ui.screens.HORIZONTAL
 import com.den.craftaday.ui.screens.screenManager.HomeRouter
 import com.den.craftaday.ui.screens.screenManager.LoginRouter
-import com.den.craftaday.ui.screens.screenManager.RegisterRouter
+import com.den.craftaday.ui.screens.screenManager.EmailRouter
+import com.den.craftaday.ui.screens.screenManager.NameRouter
 import com.den.craftaday.ui.screens.screenManager.WelcomeRouter
 
 @Composable
-fun WelcomeScreen(backStack: NavBackStack<NavKey>) {
-
-    // ViewModel injection
-    val viewModel: WelcomeViewModel = hiltViewModel()
-
+fun WelcomeScreen(
+    backStack: NavBackStack<NavKey>,
+    viewModel: WelcomeViewModel
+) {
     // User state management
     val userState by viewModel.userState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    when(val user = userState) {
-        is AuthState.Authenticated -> {
-            val userId = user.userId
+    // Navigation logic handled in LaunchedEffect to avoid side effects during composition
+    LaunchedEffect(userState) {
+        if (userState is AuthState.Authenticated) {
+            val userId = (userState as AuthState.Authenticated).userId
             backStack.clear()
             backStack.add(HomeRouter(userId))
         }
-
-        else -> {
-            backStack.clear()
-            backStack.add(WelcomeRouter)
-        }
     }
 
+    WelcomeScreenContent(
+        userState = userState,
+        onLoginClick = { backStack.add(LoginRouter) },
+        onRegisterClick = { backStack.add(NameRouter) },
+        onGoogleClick = {
+            viewModel.updateAuthState(AuthState.NotAuthenticated)
+            viewModel.googleAuthorization(context)
+        },
+        onAnonymousClick = {
+            viewModel.updateAuthState(AuthState.NotAuthenticated)
+            viewModel.createAnonymousAccount()
+        }
+    )
+}
+
+@Composable
+fun WelcomeScreenContent(
+    userState: AuthState,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onGoogleClick: () -> Unit,
+    onAnonymousClick: () -> Unit
+) {
     Scaffold(
         modifier = Modifier
             .fillMaxSize(),
@@ -70,8 +92,10 @@ fun WelcomeScreen(backStack: NavBackStack<NavKey>) {
                 userState = userState
             )
             AuthButtons(
-                viewModel = viewModel,
-                backStack = backStack
+                onLoginClick = onLoginClick,
+                onRegisterClick = onRegisterClick,
+                onGoogleClick = onGoogleClick,
+                onAnonymousClick = onAnonymousClick
             )
         }
     }
@@ -106,11 +130,11 @@ fun IntroContent(userState: AuthState) {
 
 @Composable
 fun AuthButtons(
-    viewModel: WelcomeViewModel,
-    backStack: NavBackStack<NavKey>
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onGoogleClick: () -> Unit,
+    onAnonymousClick: () -> Unit
 ){
-    val context = LocalContext.current
-
     Column(
         modifier = Modifier
             .fillMaxWidth(),
@@ -118,27 +142,33 @@ fun AuthButtons(
         verticalArrangement = Arrangement.spacedBy(AUTH_BUTTON_VERTICAL_SPACE)
     ) {
         LoginButton {
-            backStack.add(LoginRouter)
+            onLoginClick()
         }
 
         RegisterButton {
-            backStack.add(RegisterRouter)
+            onRegisterClick()
         }
 
         GoogleButton {
-            viewModel.updateAuthState(AuthState.NotAuthenticated)
-            viewModel.googleAuthorization(context)
+            onGoogleClick()
         }
 
         AnonymousButton {
-            viewModel.updateAuthState(AuthState.NotAuthenticated)
-            viewModel.createAnonymousAccount()
+            onAnonymousClick()
         }
     }
 }
 
-@Preview(showBackground = true)
+@Preview(uiMode = 1)
 @Composable
 fun WelcomeScreenPreview() {
-    WelcomeScreen(backStack = NavBackStack())
+    CraftADayTheme {
+        WelcomeScreenContent(
+            userState = AuthState.NotAuthenticated,
+            onLoginClick = {},
+            onRegisterClick = {},
+            onGoogleClick = {},
+            onAnonymousClick = {}
+        )
+    }
 }

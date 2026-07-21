@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 @HiltViewModel
 class ScreenManagerViewModel @Inject constructor(
-    private val authorizationUseCase: AuthorizationUseCase
+    authorizationUseCase: AuthorizationUseCase
 ) : ViewModel() {
     val userState: StateFlow<AuthState> = authorizationUseCase.userState
 }

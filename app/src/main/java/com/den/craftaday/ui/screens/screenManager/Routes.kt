@@ -15,7 +15,14 @@ data object WelcomeRouter: NavKey
 data object LoginRouter: NavKey
 
 @Serializable
-data object RegisterRouter: NavKey
+data object EmailRouter: NavKey
+
+@Serializable
+data object NameRouter: NavKey
+
+@Serializable
+data object PasswordRouter: NavKey
+
 
 @Serializable
 data object ForgotPasswordRouter: NavKey

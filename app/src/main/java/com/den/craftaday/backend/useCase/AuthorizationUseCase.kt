@@ -29,5 +29,19 @@ class AuthorizationUseCase @Inject constructor(
     fun updateAuthState(authState: AuthState){
         accountService.updateState(authState)
     }
+
+    suspend fun registerUser(
+        firstName: String,
+        lastName: String,
+        password: String,
+        email: String,
+    ) {
+        accountService.register(
+            firstName,
+            lastName = lastName,
+            password = password,
+            email = email
+        )
+    }
 }
 

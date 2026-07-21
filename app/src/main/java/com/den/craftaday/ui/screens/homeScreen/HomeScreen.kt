@@ -13,10 +13,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
+import com.den.craftaday.backend.viewModels.HomeViewModel
+import com.den.craftaday.backend.viewModels.ScreenManagerViewModel
 import com.den.craftaday.ui.screens.screenManager.SettingsRouter
 
 @Composable
-fun HomeScreen(userId: String, backStack: NavBackStack<NavKey>) {
+fun HomeScreen(
+    userId: String,
+    backStack: NavBackStack<NavKey>,
+    homeViewModel: HomeViewModel
+) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
     ) { padding ->

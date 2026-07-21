@@ -22,11 +22,7 @@ private val DarkColorScheme = darkColorScheme(
 private val LightColorScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
-    tertiary = Pink40,
-    background = AppStartColor,
-    surface = AppStartColor,
-    onBackground = Color.White,
-    onSurface = Color.White
+    tertiary = Pink40
 )
 
 val LocalExtendedColors = staticCompositionLocalOf {
@@ -45,30 +41,60 @@ fun CraftADayTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val extendedColors = if (darkTheme) {
+        ExtendedColors(
+            text = Color.White,
+            background = Color(0xFF252525),
+            primary = Color(0xFF9C27B0),
+            secondary = Color(0xFF1F79D7)
+        )
+    } else {
+        ExtendedColors(
+            text = Color.Black,
+            background = Color(0xFFF5F5F5),
+            primary = AppStartColor,
+            secondary = Color(0xFFC54E29)
+        )
+    }
 
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (darkTheme)
+                dynamicDarkColorScheme(context).copy(
+                    primary = extendedColors.primary,
+                    secondary = extendedColors.secondary,
+                    background = extendedColors.background,
+                    surface = extendedColors.background,
+                    onBackground = extendedColors.text,
+                    onSurface = extendedColors.text
+                )
+            else dynamicLightColorScheme(context).copy(
+                primary = extendedColors.primary,
+                secondary = extendedColors.secondary,
+                background = extendedColors.background,
+                surface = extendedColors.background,
+                onBackground = extendedColors.text,
+                onSurface = extendedColors.text
+            )
         }
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
-    val extendedColors = if (darkTheme) {
-        ExtendedColors(
-            text = Color.White,
-            background = Color.Black,
-            primary = Color(0xFF2196F3),
-            secondary = Color(0xFF2263A6)
+        darkTheme -> DarkColorScheme.copy(
+            primary = extendedColors.primary,
+            secondary = extendedColors.secondary,
+            background = extendedColors.background,
+            surface = extendedColors.background,
+            onBackground = extendedColors.text,
+            onSurface = extendedColors.text
         )
-    } else {
-        ExtendedColors(
-            text = Color.White,
-            background = AppStartColor,
-            primary = Color(0xFFE37235),
-            secondary = Color(0xFFC54E29)
+
+        else -> LightColorScheme.copy(
+            primary = extendedColors.primary,
+            secondary = extendedColors.secondary,
+            background = extendedColors.background,
+            surface = extendedColors.background,
+            onBackground = extendedColors.text,
+            onSurface = extendedColors.text
         )
     }
 
