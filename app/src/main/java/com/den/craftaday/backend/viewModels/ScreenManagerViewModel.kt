@@ -1,7 +1,6 @@
 package com.den.craftaday.backend.viewModels
 
 import androidx.lifecycle.ViewModel
-import com.den.craftaday.backend.impl.AccountService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 

@@ -16,17 +16,14 @@ import androidx.credentials.PublicKeyCredential
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.NoCredentialException
-import com.den.craftaday.backend.impl.AccountService
+import com.den.craftaday.backend.blueprints.AccountService
 import com.den.craftaday.backend.states.AuthState
-import com.google.android.gms.tasks.Task
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.den.craftaday.helper.toTitle
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.AuthCredential
-import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -215,7 +212,7 @@ class AccountServiceRepo(
             auth.createUserWithEmailAndPassword(email, password).await()
                 .user?.updateProfile(
                     UserProfileChangeRequest.Builder()
-                        .setDisplayName("$firstName $lastName").build()
+                        .setDisplayName("${firstName.toTitle} ${lastName.toTitle}").build()
                 )
             _userState.value = AuthState.Authenticated(
                 userId = auth.currentUser!!.uid,

@@ -2,6 +2,7 @@
 package com.den.craftaday.ui.screens.registerScreen
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -29,14 +31,14 @@ import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.viewModels.RegisterViewModel
-import com.den.craftaday.helper.validatorPassword
+import com.den.craftaday.helper.validatorPasswordWithConfirmation
 import com.den.craftaday.ui.screens.AUTH_BUTTON_VERTICAL_SPACE
 import com.den.craftaday.ui.screens.AUTH_BUTTON_WIDTH
 import com.den.craftaday.ui.screens.AUTH_TEXT_FIELD_WIDTH
-import com.den.craftaday.ui.screens.registerScreen.components.AuthButton
-import com.den.craftaday.ui.screens.registerScreen.components.BackArrow
-import com.den.craftaday.ui.screens.registerScreen.components.FooterContent
-import com.den.craftaday.ui.screens.registerScreen.components.PasswordTextField
+import com.den.craftaday.ui.screens.components.AuthButton
+import com.den.craftaday.ui.screens.components.BackArrow
+import com.den.craftaday.ui.screens.components.FooterContent
+import com.den.craftaday.ui.screens.components.PasswordWithConfirmationTextField
 import com.den.craftaday.ui.screens.screenManager.HomeRouter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,6 +59,9 @@ fun PasswordScreen(backStack: NavBackStack<NavKey>, registerViewModel: RegisterV
     // User state management
     val userState by registerViewModel.userState.collectAsStateWithLifecycle()
 
+    // Loading state
+    val isLoading by registerViewModel.isLoading.collectAsStateWithLifecycle()
+
     // Navigation logic handled in LaunchedEffect to avoid side effects during composition
     LaunchedEffect(userState) {
         if (userState is AuthState.Authenticated) {
@@ -65,7 +70,6 @@ fun PasswordScreen(backStack: NavBackStack<NavKey>, registerViewModel: RegisterV
             backStack.add(HomeRouter(userId))
         }
     }
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -79,55 +83,70 @@ fun PasswordScreen(backStack: NavBackStack<NavKey>, registerViewModel: RegisterV
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+                .padding(padding)
         ) {
-
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(25.dp)
+                verticalArrangement = Arrangement.Center,
             ) {
-                // Intro text
-                IntroPasswordContent(
-                    serverErrorMessage = if (userState is AuthState.Error) {
-                        (userState as AuthState.Error).message
-                    } else {
-                        null
-                    }
-                )
 
-                // Text fields and button interactive content
-                InteractivePasswordContent(
-                    passwordState = passwordState,
-                    confirmPasswordState = confirmPasswordState,
-                    passwordMessage = passwordMessage,
-                    confirmPasswordMessage = confirmPasswordMessage
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(25.dp)
                 ) {
-                    if (validatorPassword(
-                            passwordState = passwordState.text,
-                            confirmPasswordState = confirmPasswordState.text,
-                            passwordMessage = passwordMessage,
-                            confirmPasswordMessage = confirmPasswordMessage
-                        )
+                    // Intro text
+                    IntroPasswordContent(
+                        serverErrorMessage = if (userState is AuthState.Error) {
+                            (userState as AuthState.Error).message
+                        } else {
+                            null
+                        }
+                    )
+
+                    // Text fields and button interactive content
+                    InteractivePasswordContent(
+                        passwordState = passwordState,
+                        confirmPasswordState = confirmPasswordState,
+                        passwordMessage = passwordMessage,
+                        confirmPasswordMessage = confirmPasswordMessage
                     ) {
-                        // 1. Clear the user state
-                        registerViewModel.updateAuthState(AuthState.NotAuthenticated)
+                        if (validatorPasswordWithConfirmation(
+                                passwordState = passwordState.text,
+                                confirmPasswordState = confirmPasswordState.text,
+                                passwordMessage = passwordMessage,
+                                confirmPasswordMessage = confirmPasswordMessage
+                            )
+                        ) {
+                            // 1. Clear the user state
+                            registerViewModel.updateAuthState(AuthState.NotAuthenticated)
 
-                        // 2. Update the user password information
-                        registerViewModel.updatePassword(passwordState.text.toString())
+                            // 2. Update the user password information
+                            registerViewModel.updatePassword(passwordState.text.toString())
 
-                        // 3. Register the user
-                        registerViewModel.registerUser()
+                            // 3. Register the user
+                            registerViewModel.registerUser()
+                        }
                     }
-                }
 
-                // Footer text
-                FooterContent()
+                    // Footer text
+                    FooterContent()
+                }
+            }
+
+            if (isLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.background
+                )
             }
         }
     }
@@ -137,8 +156,7 @@ fun PasswordScreen(backStack: NavBackStack<NavKey>, registerViewModel: RegisterV
 @Composable
 fun IntroPasswordContent(serverErrorMessage: String?) {
 
-    val paragraph = serverErrorMessage ?:
-    "Add a secure password to protect your account"
+    val paragraph = serverErrorMessage ?: "Add a secure password to protect your account"
     val color = if (serverErrorMessage != null) {
         MaterialTheme.colorScheme.error
     } else {
@@ -181,24 +199,22 @@ fun InteractivePasswordContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(AUTH_BUTTON_VERTICAL_SPACE)
     ) {
-        PasswordTextField(
+        PasswordWithConfirmationTextField(
             modifier = Modifier.fillMaxWidth(AUTH_TEXT_FIELD_WIDTH),
             textState = passwordState,
             label = "Password",
             placeholder = "Password",
             isError = passwordMessage.value.isNotEmpty(),
             errorMessage = passwordMessage.value,
-            arePasswordsMatching = arePasswordsMatching
         )
 
-        PasswordTextField(
+        PasswordWithConfirmationTextField(
             modifier = Modifier.fillMaxWidth(AUTH_TEXT_FIELD_WIDTH),
             textState = confirmPasswordState,
             label = "Confirm Password",
             placeholder = "Confirm Password",
-            isError = confirmPasswordMessage.value.isNotEmpty(),
+            isError = confirmPasswordMessage.value.isNotEmpty() && !arePasswordsMatching,
             errorMessage = confirmPasswordMessage.value,
-            arePasswordsMatching = arePasswordsMatching
         )
 
         AuthButton(

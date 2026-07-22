@@ -2,7 +2,7 @@
 package com.den.craftaday.backend.useCase
 
 import android.content.Context
-import com.den.craftaday.backend.impl.AccountService
+import com.den.craftaday.backend.blueprints.AccountService
 import com.den.craftaday.backend.states.AuthState
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
@@ -41,6 +41,16 @@ class AuthorizationUseCase @Inject constructor(
             lastName = lastName,
             password = password,
             email = email
+        )
+    }
+
+    suspend fun login(
+        email: String,
+        password: String,
+    ) {
+        accountService.login(
+            email = email,
+            password = password
         )
     }
 }

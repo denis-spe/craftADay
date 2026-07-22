@@ -1,12 +1,8 @@
-package com.den.craftaday.backend.impl
+package com.den.craftaday.backend.blueprints
 
 import android.content.Context
-import androidx.credentials.GetCredentialRequest
 import com.den.craftaday.backend.states.AuthState
-import com.google.android.gms.tasks.Task
-import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.StateFlow
 
 interface AccountService {

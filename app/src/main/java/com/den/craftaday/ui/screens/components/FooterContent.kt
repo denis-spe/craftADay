@@ -1,6 +1,6 @@
 // Love the LORD your GOD with all your soul and with all your mind
 // and with all your might and love your neighbor as yourself
-package com.den.craftaday.ui.screens.registerScreen.components
+package com.den.craftaday.ui.screens.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

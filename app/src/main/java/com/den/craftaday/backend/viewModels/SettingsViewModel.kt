@@ -3,7 +3,6 @@ package com.den.craftaday.backend.viewModels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.den.craftaday.backend.impl.AccountService
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.useCase.AuthorizationUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel

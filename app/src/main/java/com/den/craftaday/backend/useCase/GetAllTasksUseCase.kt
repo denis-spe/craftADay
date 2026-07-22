@@ -2,8 +2,8 @@
 package com.den.craftaday.backend.useCase
 
 import com.den.craftaday.backend.dataStructure.Task
-import com.den.craftaday.backend.impl.AccountService
-import com.den.craftaday.backend.impl.DataStorage
+import com.den.craftaday.backend.blueprints.AccountService
+import com.den.craftaday.backend.blueprints.DataStorage
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 

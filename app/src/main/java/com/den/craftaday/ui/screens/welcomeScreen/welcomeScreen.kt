@@ -2,10 +2,12 @@
 package com.den.craftaday.ui.screens.welcomeScreen
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -16,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -44,6 +48,8 @@ fun WelcomeScreen(
     val userState by viewModel.userState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    val isAnonymousLoading = viewModel.isLoading.collectAsStateWithLifecycle()
+
     // Navigation logic handled in LaunchedEffect to avoid side effects during composition
     LaunchedEffect(userState) {
         if (userState is AuthState.Authenticated) {
@@ -55,8 +61,14 @@ fun WelcomeScreen(
 
     WelcomeScreenContent(
         userState = userState,
-        onLoginClick = { backStack.add(LoginRouter) },
-        onRegisterClick = { backStack.add(NameRouter) },
+        isAnonymousLoading = isAnonymousLoading.value,
+        onLoginClick = {
+            viewModel.updateAuthState(AuthState.NotAuthenticated)
+            backStack.add(LoginRouter) },
+        onRegisterClick = {
+            viewModel.updateAuthState(AuthState.NotAuthenticated)
+            backStack.add(NameRouter)
+                          },
         onGoogleClick = {
             viewModel.updateAuthState(AuthState.NotAuthenticated)
             viewModel.googleAuthorization(context)
@@ -71,36 +83,87 @@ fun WelcomeScreen(
 @Composable
 fun WelcomeScreenContent(
     userState: AuthState,
+    isAnonymousLoading: Boolean = false,
     onLoginClick: () -> Unit,
     onRegisterClick: () -> Unit,
     onGoogleClick: () -> Unit,
     onAnonymousClick: () -> Unit
 ) {
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = HORIZONTAL),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
         ) {
-            IntroContent(
-                userState = userState
-            )
-            AuthButtons(
-                onLoginClick = onLoginClick,
-                onRegisterClick = onRegisterClick,
-                onGoogleClick = onGoogleClick,
-                onAnonymousClick = onAnonymousClick
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = HORIZONTAL),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(30.dp)
+                ) {
+                    IntroContent(
+                        userState = userState
+                    )
+
+                    AuthButtons(
+                        onLoginClick = onLoginClick,
+                        onRegisterClick = onRegisterClick,
+                        onGoogleClick = onGoogleClick,
+                        onAnonymousClick = onAnonymousClick
+                    )
+
+                    FooterContent()
+                }
+            }
+
+            if (isAnonymousLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.background
+                )
+            }
         }
     }
 }
 
+@Composable
+fun FooterContent() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = "The LORD of host is my refuge and fortress",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            text = "By continuing, you agree to our",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            text = "Privacy Policy",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Terms of Service",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
 
 @Composable
 fun IntroContent(userState: AuthState) {
@@ -114,6 +177,15 @@ fun IntroContent(userState: AuthState) {
         Text(
             text = stringResource(id = com.den.craftaday.R.string.app_name),
             style = MaterialTheme.typography.headlineLarge,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = buildAnnotatedString {
+                append("Craft your day by setting task and plan but remember that, ")
+                append("`A man's heart deviseth his way: but the LORD directeth his steps. Proverbs 16:9`")
+            },
+            style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
         )
 

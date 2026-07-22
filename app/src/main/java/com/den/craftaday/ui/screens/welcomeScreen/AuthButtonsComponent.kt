@@ -2,7 +2,9 @@
 package com.den.craftaday.ui.screens.welcomeScreen
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
@@ -15,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.den.craftaday.ui.screens.AUTH_BUTTON_WIDTH
+import com.den.craftaday.ui.screens.components.Loader
 
 @Composable
 fun GoogleButton(onClick: () -> Unit) {
@@ -60,7 +63,9 @@ fun RegisterButton(onClick: () -> Unit) {
 }
 
 @Composable
-fun AnonymousButton(onClick: () -> Unit) {
+fun AnonymousButton(
+    onClick: () -> Unit
+) {
     TextButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(AUTH_BUTTON_WIDTH)

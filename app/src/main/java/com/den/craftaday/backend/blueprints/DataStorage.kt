@@ -1,4 +1,4 @@
-package com.den.craftaday.backend.impl
+package com.den.craftaday.backend.blueprints
 
 import com.den.craftaday.backend.dataStructure.Task
 import com.google.firebase.firestore.FirebaseFirestore

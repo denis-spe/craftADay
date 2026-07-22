@@ -56,6 +56,24 @@ fun validatorEmail(
 
 fun validatorPassword(
     passwordState: CharSequence,
+    passwordMessage: MutableState<String>
+): Boolean {
+    return if (passwordState.isEmpty()) {
+        passwordMessage.value = "Password cannot be empty"
+        false
+    } else {
+        if (passwordState.length < 8) {
+            passwordMessage.value = "Password must be at least 8 characters long"
+            false
+        } else {
+            passwordMessage.value = ""
+            true
+        }
+    }
+}
+
+fun validatorPasswordWithConfirmation(
+    passwordState: CharSequence,
     confirmPasswordState: CharSequence,
     passwordMessage: MutableState<String>,
     confirmPasswordMessage: MutableState<String>,
@@ -72,7 +90,9 @@ fun validatorPassword(
             false
         } else if (passwordState != confirmPasswordState) {
             passwordMessage.value = ""
-            confirmPasswordMessage.value = "Passwords do not match"
+            confirmPasswordMessage.let {
+                it.value = "Passwords do not match"
+            }
             false
         } else {
             passwordMessage.value = ""

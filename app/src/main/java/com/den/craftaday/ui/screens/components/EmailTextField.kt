@@ -1,5 +1,5 @@
 // Bless be the name of LORD GOD of hosts
-package com.den.craftaday.ui.screens.registerScreen.components
+package com.den.craftaday.ui.screens.components
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions

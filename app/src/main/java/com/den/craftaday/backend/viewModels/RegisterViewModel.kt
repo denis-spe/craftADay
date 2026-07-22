@@ -19,6 +19,8 @@ class RegisterViewModel @Inject constructor(
 ) : ViewModel() {
     private val _userInfo = MutableStateFlow(UserInfo())
     val userState: StateFlow<AuthState> = authorizationUseCase.userState
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading = _isLoading.asStateFlow()
 
     /**
      * Register user to the Firebase Authentication service.
@@ -32,12 +34,14 @@ class RegisterViewModel @Inject constructor(
 
         // Register the user using the use case
         viewModelScope.launch {
+            _isLoading.value = true
             authorizationUseCase.registerUser(
                 firstName = firstName,
                 lastName = lastName,
                 password = password,
                 email = email
             )
+            _isLoading.value = false
         }
     }
 

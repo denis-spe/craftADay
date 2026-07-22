@@ -20,7 +20,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavBackStack
@@ -30,10 +29,10 @@ import com.den.craftaday.helper.validateName
 import com.den.craftaday.ui.screens.AUTH_BUTTON_VERTICAL_SPACE
 import com.den.craftaday.ui.screens.AUTH_BUTTON_WIDTH
 import com.den.craftaday.ui.screens.AUTH_TEXT_FIELD_WIDTH
-import com.den.craftaday.ui.screens.registerScreen.components.AuthButton
-import com.den.craftaday.ui.screens.registerScreen.components.BackArrow
-import com.den.craftaday.ui.screens.registerScreen.components.FooterContent
-import com.den.craftaday.ui.screens.registerScreen.components.NameTextField
+import com.den.craftaday.ui.screens.components.AuthButton
+import com.den.craftaday.ui.screens.components.BackArrow
+import com.den.craftaday.ui.screens.components.FooterContent
+import com.den.craftaday.ui.screens.components.NameTextField
 import com.den.craftaday.ui.screens.screenManager.EmailRouter
 
 @OptIn(ExperimentalMaterial3Api::class)

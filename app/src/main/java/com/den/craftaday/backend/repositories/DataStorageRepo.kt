@@ -3,10 +3,9 @@ package com.den.craftaday.backend.repositories
 
 import android.util.Log
 import com.den.craftaday.backend.dataStructure.Task
-import com.den.craftaday.backend.impl.DataStorage
+import com.den.craftaday.backend.blueprints.DataStorage
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.dataObjects
-import kotlinx.coroutines.flow.toList
 
 class DataStorageRepo(
     override val firestore: FirebaseFirestore

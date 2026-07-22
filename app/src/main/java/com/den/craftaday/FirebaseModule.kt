@@ -1,8 +1,8 @@
 // Great id the LORD GOD of hosts
 package com.den.craftaday
 
-import com.den.craftaday.backend.impl.AccountService
-import com.den.craftaday.backend.impl.DataStorage
+import com.den.craftaday.backend.blueprints.AccountService
+import com.den.craftaday.backend.blueprints.DataStorage
 import com.den.craftaday.backend.repositories.AccountServiceRepo
 import com.den.craftaday.backend.repositories.DataStorageRepo
 import com.google.firebase.auth.FirebaseAuth

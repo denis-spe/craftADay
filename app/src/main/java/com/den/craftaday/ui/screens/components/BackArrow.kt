@@ -1,5 +1,5 @@
 // Glory be to the name of the LORD of host, The GOD of Israel.
-package com.den.craftaday.ui.screens.registerScreen.components
+package com.den.craftaday.ui.screens.components
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
