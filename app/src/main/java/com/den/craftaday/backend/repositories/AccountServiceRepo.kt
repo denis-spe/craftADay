@@ -21,6 +21,7 @@ import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.helper.toTitle
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.FirebaseException
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
@@ -140,6 +141,10 @@ class AccountServiceRepo(
                     } catch (e: NoCredentialException) {
                         _userState.value = AuthState.Error("Failed to get credential from CustomCredential")
                         Log.e(TAG, "Failed to get credential from CustomCredential", e)
+                        return e
+                    } catch (e: FirebaseException) {
+                        _userState.value = AuthState.Error(e.message ?: "Server authentication failed")
+                        Log.e(TAG, "Firebase authentication failed", e)
                         return e
                     }
                 } else {

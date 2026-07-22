@@ -75,7 +75,7 @@ fun LoginScreen(backStack: NavBackStack<NavKey>) {
         if (userState is AuthState.Authenticated) {
             val userId = (userState as AuthState.Authenticated).userId
             backStack.clear()
-            backStack.add(HomeRouter(userId))
+            backStack.add(HomeRouter)
         }
     }
 

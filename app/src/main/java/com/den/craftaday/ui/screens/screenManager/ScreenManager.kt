@@ -109,7 +109,6 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(
     // ===== Home Screen =====
     entry<HomeRouter> {
         HomeScreen(
-            it.userId,
             backStack = backStack,
             homeViewModel = homeViewModel
         )
@@ -145,7 +144,7 @@ fun ScreenManager() {
     val isLogIn = remember(userState) {
         when(val user = userState) {
             AuthState.NotAuthenticated -> WelcomeRouter
-            is AuthState.Authenticated -> HomeRouter(user.userId)
+            is AuthState.Authenticated -> HomeRouter
             is AuthState.Error -> WelcomeRouter
             else -> WelcomeRouter // Should not happen due to early return
         }

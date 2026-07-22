@@ -5,7 +5,7 @@ import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class HomeRouter(val userId: String): NavKey
+data object HomeRouter: NavKey
 
 
 @Serializable

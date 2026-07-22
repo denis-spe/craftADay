@@ -6,6 +6,7 @@ import com.den.craftaday.backend.dataStructure.Task
 import com.den.craftaday.backend.blueprints.DataStorage
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.dataObjects
+import kotlinx.coroutines.flow.stateIn
 
 class DataStorageRepo(
     override val firestore: FirebaseFirestore
@@ -25,6 +26,7 @@ class DataStorageRepo(
 
     override fun addTask(userId: String, task: Task) {
         firestore
+            .collection(DATASET_COLLECTION)
             .document(userId)
             .collection(TASKS_COLLECTION)
             .add(task)
