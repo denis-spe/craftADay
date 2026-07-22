@@ -18,16 +18,17 @@ class DataStorageRepo(
         const val TAG = "DataStorageRepo"
     }
 
-    override fun getAllDatasets(userId: String) = firestore
+    val docRef = firestore
         .collection(DATASET_COLLECTION)
+
+
+    override fun getAllDatasets(userId: String) = docRef
         .document(userId)
         .collection(TASKS_COLLECTION)
         .dataObjects<Task>()
 
     override fun addTask(userId: String, task: Task) {
-        firestore
-            .collection(DATASET_COLLECTION)
-            .document(userId)
+         docRef.document(userId)
             .collection(TASKS_COLLECTION)
             .add(task)
             .addOnSuccessListener {
@@ -37,4 +38,38 @@ class DataStorageRepo(
                 Log.e(TAG, "Error adding task: $it")
             }
     }
+
+    override fun deleteTask(
+        userId: String,
+        task: Task
+    ) {
+        docRef.document(userId)
+            .collection(TASKS_COLLECTION)
+            .document(task.id)
+            .delete()
+            .addOnSuccessListener {
+                Log.w(TAG, "Task deleted successfully")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "Error deleting task: $it")
+            }
+    }
+
+    override fun updateTask(
+        userId: String,
+        task: Task
+    ) {
+        docRef.document(userId)
+            .collection(TASKS_COLLECTION)
+            .document(task.id)
+            .set(task)
+            .addOnSuccessListener {
+                Log.w(TAG, "Task updated successfully")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "Error updating task: $it")
+            }
+    }
+
+
 }
