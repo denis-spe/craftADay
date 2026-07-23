@@ -22,11 +22,13 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.den.craftaday.backend.states.AuthState
+import com.den.craftaday.backend.viewModels.DiagramViewModel
 import com.den.craftaday.backend.viewModels.HomeViewModel
 import com.den.craftaday.backend.viewModels.RegisterViewModel
 import com.den.craftaday.backend.viewModels.ScreenManagerViewModel
 import com.den.craftaday.backend.viewModels.SettingsViewModel
 import com.den.craftaday.backend.viewModels.WelcomeViewModel
+import com.den.craftaday.ui.screens.diagramScreen.DiagramScreen
 import com.den.craftaday.ui.screens.homeScreen.HomeScreen
 import com.den.craftaday.ui.screens.loadingScreen.LoadingScreen
 import com.den.craftaday.ui.screens.loginScreen.LoginScreen
@@ -40,8 +42,6 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(
     backStack: NavBackStack<NavKey>,
     registerViewModel: RegisterViewModel,
     welcomeViewModel: WelcomeViewModel,
-    settingsViewModel: SettingsViewModel,
-    homeViewModel: HomeViewModel,
 ) {
     // ===== Welcome Screen =====
     entry<WelcomeRouter>(
@@ -108,6 +108,7 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(
 
     // ===== Home Screen =====
     entry<HomeRouter> {
+        val homeViewModel: HomeViewModel = hiltViewModel()
         HomeScreen(
             backStack = backStack,
             homeViewModel = homeViewModel
@@ -116,9 +117,18 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(
 
     // ===== Settings Screen =====
     entry<SettingsRouter> {
+        val settingsViewModel: SettingsViewModel = hiltViewModel()
         SettingsScreen(
             backStack = backStack,
             settingsViewModel = settingsViewModel
+        )
+    }
+
+    // ===== Diagram Screen =====
+    entry<DiagramRouter> {
+        val diagramViewModel: DiagramViewModel = hiltViewModel()
+        DiagramScreen(
+            viewModel = diagramViewModel
         )
     }
 }
@@ -129,8 +139,6 @@ fun ScreenManager() {
     val viewModel: ScreenManagerViewModel = hiltViewModel()
     val registerViewModel: RegisterViewModel = hiltViewModel()
     val welcomeViewModel: WelcomeViewModel = hiltViewModel()
-    val settingsViewModel: SettingsViewModel = hiltViewModel()
-    val homeViewModel: HomeViewModel = hiltViewModel()
 
     // 2. Observe the userState
     val userState by viewModel.userState.collectAsStateWithLifecycle()
@@ -169,8 +177,6 @@ fun ScreenManager() {
                 backStack = backStack,
                 registerViewModel = registerViewModel,
                 welcomeViewModel = welcomeViewModel,
-                settingsViewModel = settingsViewModel,
-                homeViewModel = homeViewModel
             )
         },
         transitionSpec = {

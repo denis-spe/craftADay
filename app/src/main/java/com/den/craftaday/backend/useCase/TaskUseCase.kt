@@ -9,9 +9,9 @@ import javax.inject.Inject
 
 class TaskUseCase @Inject constructor(
     private val dataStorage: DataStorage,
-    accountService: AccountService
+    private val accountService: AccountService
 ) {
-    val userId = accountService.currentUserId
+    private val userId get() = accountService.currentUserId
 
     fun addTask(task: Task) {
         dataStorage.addTask(userId = userId, task = task)

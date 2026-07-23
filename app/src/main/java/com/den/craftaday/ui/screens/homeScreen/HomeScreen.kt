@@ -20,6 +20,7 @@ import com.den.craftaday.backend.dataStructure.Task
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.HomeViewModel
 import com.den.craftaday.backend.viewModels.ScreenManagerViewModel
+import com.den.craftaday.ui.screens.screenManager.DiagramRouter
 import com.den.craftaday.ui.screens.screenManager.SettingsRouter
 
 @Composable
@@ -47,6 +48,14 @@ fun HomeScreen(
                 }
             ) {
                 Text(text = "Settings")
+            }
+
+            Button(
+                onClick = {
+                    backStack.add(DiagramRouter)
+                }
+            ) {
+                Text(text = "Diagram")
             }
 
             when (val state = fetchAllTasks.value) {

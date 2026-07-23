@@ -35,53 +35,81 @@ class DiagramViewModel @Inject constructor(
             initialValue = DataState.Loading
         )
 
-    fun addNode(title: String, parentId: String? = null, x: Float = 0f, y: Float = 0f) {
-        // Add jitter to avoid perfect overlaps
-        val jitterX = Random.nextFloat() * 40f - 20f
-        val jitterY = Random.nextFloat() * 40f - 20f
+    fun addNode(
+        title: String,
+        description: String = "",
+        priority: String = "MEDIUM",
+        status: String = "TODO",
+        color: String = "#3F51B5",
+        parentId: String? = null,
+        x: Float = 0f,
+        y: Float = 0f
+    ) {
+        val nodeWidth = 200f
+        val verticalGap = 180f
+        val horizontalGap = 220f
 
-        // Spacing in pixels between parent and child. Tunable.
-        val horizontalSpacing = 200f
-        val verticalSpacing = 40f
+        val currentList = (nodes.value as? DataState.Success)?.data ?: emptyList()
 
-        // Determine base position. If a parent is specified, position the child to the right of the parent.
-        var baseX = x
-        var baseY = y
+        var calculatedX = x
+        var calculatedY = y
 
-        if (parentId != null) {
-            val currentNodesState = nodes.value
-            if (currentNodesState is DataState.Success) {
-                val parent = currentNodesState.data.find { it.id == parentId }
-                if (parent != null) {
-                    baseX = parent.x + horizontalSpacing
-                    baseY = parent.y + verticalSpacing
-                } else {
-                    baseX = if (x == 0f) 300f else x
-                    baseY = if (y == 0f) 300f else y
-                }
+        if (x == 0f && y == 0f) {
+            if (parentId == null) {
+                // New Root Node: place at top horizontal spread (Y = 80dp)
+                val rootNodes = currentList.filter { it.parentId == null }
+                val maxX = rootNodes.maxOfOrNull { it.x } ?: 40f
+                calculatedX = if (rootNodes.isEmpty()) 60f else maxX + 260f
+                calculatedY = 80f
             } else {
-                baseX = if (x == 0f) 300f else x
-                baseY = if (y == 0f) 300f else y
+                // Child Node: place below parent (Y = parent.y + 180dp)
+                val parent = currentList.find { it.id == parentId }
+                if (parent != null) {
+                    val siblings = currentList.filter { it.parentId == parentId }
+                    if (siblings.isEmpty()) {
+                        calculatedX = parent.x
+                    } else {
+                        val maxSiblingX = siblings.maxOf { it.x }
+                        calculatedX = maxSiblingX + 240f
+                    }
+                    calculatedY = parent.y + 180f
+                } else {
+                    calculatedX = 100f
+                    calculatedY = 300f
+                }
             }
-        } else {
-            baseX = if (x == 0f) 100f else x
-            baseY = if (y == 0f) 300f else y
         }
-
-        val finalX = baseX + jitterX
-        val finalY = baseY + jitterY
-
-        Log.d("DiagramViewModel", "Adding node: $title at ($finalX, $finalY) with parent: $parentId")
 
         val newNode = DiagramNode(
             title = title,
+            description = description,
+            priority = priority,
+            status = status,
             parentId = parentId,
-            x = finalX,
-            y = finalY,
-            color = if (parentId == null) "#D94753" else "#F68C27",
-            nodeType = if (parentId == null) "ROUNDED" else "RECT"
+            x = calculatedX,
+            y = calculatedY,
+            color = if (parentId == null) "#673AB7" else color,
+            nodeType = if (parentId == null) "ROOT" else "TASK"
         )
         diagramUseCase.addDiagramNode(newNode)
+    }
+
+    fun updateNodeDetails(node: DiagramNode) {
+        diagramUseCase.updateDiagramNode(node)
+    }
+
+    fun toggleTaskStatus(node: DiagramNode) {
+        val nextStatus = when (node.status) {
+            "TODO" -> "IN_PROGRESS"
+            "IN_PROGRESS" -> "COMPLETED"
+            else -> "TODO"
+        }
+        val updatedProgress = when (nextStatus) {
+            "COMPLETED" -> 1f
+            "IN_PROGRESS" -> 0.5f
+            else -> 0f
+        }
+        diagramUseCase.updateDiagramNode(node.copy(status = nextStatus, progress = updatedProgress))
     }
 
     fun updateNodePosition(node: DiagramNode, x: Float, y: Float) {
@@ -89,28 +117,109 @@ class DiagramViewModel @Inject constructor(
     }
 
     fun reparentNode(node: DiagramNode, newParentId: String?) {
-        // When changing parent, reposition child to avoid overlap (place to the right of new parent)
-        val horizontalSpacing = 200f
-        val verticalSpacing = 40f
-
+        val currentList = (nodes.value as? DataState.Success)?.data ?: emptyList()
         var newX = node.x
         var newY = node.y
 
         if (newParentId != null) {
-            val currentNodesState = nodes.value
-            if (currentNodesState is DataState.Success) {
-                val parent = currentNodesState.data.find { it.id == newParentId }
-                if (parent != null) {
-                    newX = parent.x + horizontalSpacing
-                    newY = parent.y + verticalSpacing
-                }
+            val parent = currentList.find { it.id == newParentId }
+            if (parent != null) {
+                newX = parent.x
+                newY = parent.y + 180f
             }
         }
-
         diagramUseCase.updateDiagramNode(node.copy(parentId = newParentId, x = newX, y = newY))
     }
 
-    fun deleteNode(nodeId: String) {
-        diagramUseCase.deleteDiagramNode(nodeId)
+    fun deleteNodeAndSubtree(nodeId: String) {
+        val currentList = (nodes.value as? DataState.Success)?.data ?: emptyList()
+        val toDelete = mutableSetOf<String>()
+
+        fun collectSubtree(id: String) {
+            toDelete.add(id)
+            currentList.filter { it.parentId == id }.forEach { collectSubtree(it.id) }
+        }
+
+        collectSubtree(nodeId)
+        toDelete.forEach { id ->
+            diagramUseCase.deleteDiagramNode(id)
+        }
     }
+
+    fun deleteNode(nodeId: String) {
+        deleteNodeAndSubtree(nodeId)
+    }
+
+    /**
+     * Top-to-Bottom Auto-Layout Algorithm:
+     * Calculates hierarchical widths and positions root nodes and subtrees
+     * wide across the top-to-bottom layout with zero node overlaps.
+     */
+    fun autoLayoutTree() {
+        val currentList = (nodes.value as? DataState.Success)?.data ?: return
+        if (currentList.isEmpty()) return
+
+        val cardWidthDp = 200f
+        val nodeGapDp = 40f
+        val levelHeightDp = 180f
+
+        class LayoutNode(val node: DiagramNode) {
+            val children = mutableListOf<LayoutNode>()
+            var subtreeWidth = cardWidthDp
+            var x = 0f
+            var y = 0f
+        }
+
+        val nodeMap = currentList.associate { it.id to LayoutNode(it) }
+        currentList.forEach { node ->
+            if (node.parentId != null) {
+                nodeMap[node.parentId]?.children?.add(nodeMap[node.id]!!)
+            }
+        }
+
+        fun calculateSubtreeWidth(layoutNode: LayoutNode): Float {
+            if (layoutNode.children.isEmpty()) {
+                layoutNode.subtreeWidth = cardWidthDp
+            } else {
+                var sumWidth = 0f
+                layoutNode.children.forEach { child ->
+                    sumWidth += calculateSubtreeWidth(child)
+                }
+                sumWidth += (layoutNode.children.size - 1) * nodeGapDp
+                layoutNode.subtreeWidth = maxOf(cardWidthDp, sumWidth)
+            }
+            return layoutNode.subtreeWidth
+        }
+
+        val rootNodes = currentList.filter { it.parentId == null }
+        val rootLayoutNodes = rootNodes.mapNotNull { nodeMap[it.id] }
+        rootLayoutNodes.forEach { calculateSubtreeWidth(it) }
+
+        fun assignPositions(layoutNode: LayoutNode, startX: Float, currentY: Float) {
+            layoutNode.y = currentY
+            layoutNode.x = startX + (layoutNode.subtreeWidth / 2f) - (cardWidthDp / 2f)
+
+            var childX = startX
+            layoutNode.children.forEach { child ->
+                assignPositions(child, childX, currentY + levelHeightDp)
+                childX += child.subtreeWidth + nodeGapDp
+            }
+        }
+
+        var currentRootX = 60f
+        val startY = 80f
+
+        rootLayoutNodes.forEach { root ->
+            assignPositions(root, currentRootX, startY)
+            currentRootX += root.subtreeWidth + (nodeGapDp * 1.5f)
+        }
+
+        nodeMap.values.forEach { layoutNode ->
+            val updated = layoutNode.node.copy(x = layoutNode.x, y = layoutNode.y)
+            if (updated.x != layoutNode.node.x || updated.y != layoutNode.node.y) {
+                diagramUseCase.updateDiagramNode(updated)
+            }
+        }
+    }
+
 }

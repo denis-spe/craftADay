@@ -29,3 +29,6 @@ data object ForgotPasswordRouter: NavKey
 
 @Serializable
 data object SettingsRouter: NavKey
+
+@Serializable
+data object DiagramRouter: NavKey

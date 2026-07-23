@@ -2,11 +2,11 @@
 package com.den.craftaday.backend.repositories
 
 import android.util.Log
+import com.den.craftaday.backend.dataStructure.DiagramNode
 import com.den.craftaday.backend.dataStructure.Task
 import com.den.craftaday.backend.blueprints.DataStorage
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.dataObjects
-import kotlinx.coroutines.flow.stateIn
 
 class DataStorageRepo(
     override val firestore: FirebaseFirestore
@@ -14,6 +14,7 @@ class DataStorageRepo(
     companion object {
         const val DATASET_COLLECTION = "craftADayDataset"
         const val TASKS_COLLECTION = "tasks"
+        const val DIAGRAM_NODES_COLLECTION = "diagramNodes"
 
         const val TAG = "DataStorageRepo"
     }
@@ -30,6 +31,20 @@ class DataStorageRepo(
     override fun addTask(userId: String, task: Task) {
          docRef.document(userId)
             .collection(TASKS_COLLECTION)
+            .add(task)
+            .addOnSuccessListener {
+                Log.w(TAG, "Task added successfully")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "Error adding task: $it")
+            }
+    }
+
+    fun continuousTaskAdd(userId: String, taskId: String, task: Task) {
+        docRef.document(userId)
+            .collection(TASKS_COLLECTION)
+            .document(taskId)
+            .collection(task.id)
             .add(task)
             .addOnSuccessListener {
                 Log.w(TAG, "Task added successfully")
@@ -71,5 +86,46 @@ class DataStorageRepo(
             }
     }
 
+    override fun getDiagramNodes(userId: String) = docRef
+        .document(userId)
+        .collection(DIAGRAM_NODES_COLLECTION)
+        .dataObjects<DiagramNode>()
 
+    override fun addDiagramNode(userId: String, node: DiagramNode) {
+        docRef.document(userId)
+            .collection(DIAGRAM_NODES_COLLECTION)
+            .add(node)
+            .addOnSuccessListener {
+                Log.w(TAG, "Diagram node added successfully")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "Error adding diagram node: $it")
+            }
+    }
+
+    override fun deleteDiagramNode(userId: String, nodeId: String) {
+        docRef.document(userId)
+            .collection(DIAGRAM_NODES_COLLECTION)
+            .document(nodeId)
+            .delete()
+            .addOnSuccessListener {
+                Log.w(TAG, "Diagram node deleted successfully")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "Error deleting diagram node: $it")
+            }
+    }
+
+    override fun updateDiagramNode(userId: String, node: DiagramNode) {
+        docRef.document(userId)
+            .collection(DIAGRAM_NODES_COLLECTION)
+            .document(node.id)
+            .set(node)
+            .addOnSuccessListener {
+                Log.w(TAG, "Diagram node updated successfully")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "Error updating diagram node: $it")
+            }
+    }
 }
