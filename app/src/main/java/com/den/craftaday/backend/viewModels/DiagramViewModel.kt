@@ -88,7 +88,7 @@ class DiagramViewModel @Inject constructor(
             parentId = parentId,
             x = calculatedX,
             y = calculatedY,
-            color = if (parentId == null) "#673AB7" else color,
+            color = color,
             nodeType = if (parentId == null) "ROOT" else "TASK"
         )
         diagramUseCase.addDiagramNode(newNode)

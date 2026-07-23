@@ -75,8 +75,8 @@ fun DiagramNodeItem(
     }
 
     val shape = RoundedCornerShape(14.dp)
-    val borderWidth = if (isSelected) 3.dp else 1.5.dp
-    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else accentColor.copy(alpha = 0.85f)
+    val borderWidth = if (isSelected) 3.5.dp else 2.dp
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else accentColor
 
     Box(
         modifier = Modifier
@@ -90,7 +90,7 @@ fun DiagramNodeItem(
     ) {
         Card(
             shape = shape,
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 8.dp else 4.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -179,7 +179,7 @@ fun DiagramNodeItem(
                     text = node.title,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isCompleted) Color.Gray else Color.Black,
+                    color = if (isCompleted) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
                     textDecoration = if (isCompleted) TextDecoration.LineThrough else TextDecoration.None,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -190,7 +190,7 @@ fun DiagramNodeItem(
                     Text(
                         text = node.description,
                         fontSize = 11.sp,
-                        color = Color.DarkGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )

@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -73,7 +76,8 @@ fun DiagramScreen(
     var isCreatingRoot by remember { mutableStateOf(false) }
     var creatingChildForParentId by remember { mutableStateOf<String?>(null) }
 
-    var selectedFilter by remember { mutableStateOf("ALL") }
+    var selectedStatusFilter by remember { mutableStateOf("ALL") }
+    var selectedPriorityFilter by remember { mutableStateOf("ALL") }
 
     val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
         scale = (scale * zoomChange).coerceIn(0.2f, 3f)
@@ -110,7 +114,6 @@ fun DiagramScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFFF8F9FA))
         ) {
             // Main Canvas Area with Pan/Zoom Gestures
             Box(
@@ -153,11 +156,10 @@ fun DiagramScreen(
                         is DataState.Success -> {
                             val allNodes = result.data
 
-                            val filteredNodes = when (selectedFilter) {
-                                "TODO" -> allNodes.filter { it.status == "TODO" }
-                                "IN_PROGRESS" -> allNodes.filter { it.status == "IN_PROGRESS" }
-                                "COMPLETED" -> allNodes.filter { it.status == "COMPLETED" }
-                                else -> allNodes
+                            val filteredNodes = allNodes.filter { node ->
+                                val statusMatch = selectedStatusFilter == "ALL" || node.status == selectedStatusFilter
+                                val priorityMatch = selectedPriorityFilter == "ALL" || node.priority == selectedPriorityFilter
+                                statusMatch && priorityMatch
                             }
 
                              // Draw Top-to-Bottom Flowing Connectors
@@ -188,22 +190,22 @@ fun DiagramScreen(
                                         }
 
                                         val lineColor = try {
-                                            Color(android.graphics.Color.parseColor(parent.color))
+                                            Color(android.graphics.Color.parseColor(node.color))
                                         } catch (e: Exception) {
                                             Color.Gray
                                         }
 
                                         drawPath(
                                             path = path,
-                                            color = lineColor.copy(alpha = 0.7f),
-                                            style = Stroke(width = 3.dp.toPx())
+                                            color = lineColor.copy(alpha = 0.6f),
+                                            style = Stroke(width = 2.5.dp.toPx())
                                         )
 
                                         // Draw Downward Arrowhead at child top connection point
                                         val arrowPath = Path().apply {
                                             moveTo(endX, endY)
-                                            lineTo(endX - 7.dp.toPx(), endY - 12.dp.toPx())
-                                            lineTo(endX + 7.dp.toPx(), endY - 12.dp.toPx())
+                                            lineTo(endX - 6.dp.toPx(), endY - 10.dp.toPx())
+                                            lineTo(endX + 6.dp.toPx(), endY - 10.dp.toPx())
                                             close()
                                         }
                                         drawPath(path = arrowPath, color = lineColor)
@@ -235,7 +237,7 @@ fun DiagramScreen(
                 shape = RoundedCornerShape(16.dp),
                 tonalElevation = 6.dp,
                 shadowElevation = 6.dp,
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
@@ -247,12 +249,13 @@ fun DiagramScreen(
                             Text(
                                 text = "Project Task Tree",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Top-to-bottom infinite node planner",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
@@ -277,22 +280,55 @@ fun DiagramScreen(
 
                     // Status Filter Chips
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Filter:",
+                            text = "Status:",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color.DarkGray
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         listOf("ALL", "TODO", "IN_PROGRESS", "COMPLETED").forEach { filter ->
                             FilterChip(
-                                selected = selectedFilter == filter,
-                                onClick = { selectedFilter = filter },
+                                selected = selectedStatusFilter == filter,
+                                onClick = { selectedStatusFilter = filter },
                                 label = {
                                     Text(
                                         text = filter.replace("_", " "),
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Priority Filter Chips
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Priority:",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        listOf("ALL", "LOW", "MEDIUM", "HIGH", "URGENT").forEach { filter ->
+                            FilterChip(
+                                selected = selectedPriorityFilter == filter,
+                                onClick = { selectedPriorityFilter = filter },
+                                label = {
+                                    Text(
+                                        text = filter,
                                         fontSize = 10.sp
                                     )
                                 }
@@ -326,9 +362,11 @@ fun DiagramScreen(
 
     // Dialog for creating a Child Node
     if (creatingChildForParentId != null) {
+        val parentNode = (nodesState as? DataState.Success)?.data?.find { it.id == creatingChildForParentId }
         EditTaskNodeDialog(
             node = null,
             isCreatingChild = true,
+            initialColor = parentNode?.color,
             onDismiss = { creatingChildForParentId = null },
             onSave = { title, description, priority, status, color ->
                 viewModel.addNode(
