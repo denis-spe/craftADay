@@ -40,8 +40,36 @@ class DiagramViewModel @Inject constructor(
         val jitterX = Random.nextFloat() * 40f - 20f
         val jitterY = Random.nextFloat() * 40f - 20f
 
-        val finalX = (if (x == 0f && parentId == null) 100f else x) + jitterX
-        val finalY = (if (y == 0f && parentId == null) 300f else y) + jitterY
+        // Spacing in pixels between parent and child. Tunable.
+        val horizontalSpacing = 200f
+        val verticalSpacing = 40f
+
+        // Determine base position. If a parent is specified, position the child to the right of the parent.
+        var baseX = x
+        var baseY = y
+
+        if (parentId != null) {
+            val currentNodesState = nodes.value
+            if (currentNodesState is DataState.Success) {
+                val parent = currentNodesState.data.find { it.id == parentId }
+                if (parent != null) {
+                    baseX = parent.x + horizontalSpacing
+                    baseY = parent.y + verticalSpacing
+                } else {
+                    baseX = if (x == 0f) 300f else x
+                    baseY = if (y == 0f) 300f else y
+                }
+            } else {
+                baseX = if (x == 0f) 300f else x
+                baseY = if (y == 0f) 300f else y
+            }
+        } else {
+            baseX = if (x == 0f) 100f else x
+            baseY = if (y == 0f) 300f else y
+        }
+
+        val finalX = baseX + jitterX
+        val finalY = baseY + jitterY
 
         Log.d("DiagramViewModel", "Adding node: $title at ($finalX, $finalY) with parent: $parentId")
 
@@ -61,7 +89,25 @@ class DiagramViewModel @Inject constructor(
     }
 
     fun reparentNode(node: DiagramNode, newParentId: String?) {
-        diagramUseCase.updateDiagramNode(node.copy(parentId = newParentId))
+        // When changing parent, reposition child to avoid overlap (place to the right of new parent)
+        val horizontalSpacing = 200f
+        val verticalSpacing = 40f
+
+        var newX = node.x
+        var newY = node.y
+
+        if (newParentId != null) {
+            val currentNodesState = nodes.value
+            if (currentNodesState is DataState.Success) {
+                val parent = currentNodesState.data.find { it.id == newParentId }
+                if (parent != null) {
+                    newX = parent.x + horizontalSpacing
+                    newY = parent.y + verticalSpacing
+                }
+            }
+        }
+
+        diagramUseCase.updateDiagramNode(node.copy(parentId = newParentId, x = newX, y = newY))
     }
 
     fun deleteNode(nodeId: String) {
