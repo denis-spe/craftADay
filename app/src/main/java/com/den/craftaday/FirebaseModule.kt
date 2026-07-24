@@ -40,15 +40,11 @@ object FirebaseModule {
     fun provideFirebaseFirestore(): FirebaseFirestore {
         val firestore = FirebaseFirestore.getInstance()
 
-        // Turn off persistent disk caching during local debugging
-        // to avoid conflicts with your local emulator data
-        val cacheSettings: LocalCacheSettings = if (BuildConfig.DEBUG) {
-            MemoryCacheSettings.newBuilder().build()
-        } else {
-            PersistentCacheSettings.newBuilder()
-                .setSizeBytes(100 * 1024 * 1024) // 100 MB cache
-                .build()
-        }
+        // Enable persistent disk caching even in debug mode to ensure diagram
+        // data survives app restarts and local synchronization delays.
+        val cacheSettings: LocalCacheSettings = PersistentCacheSettings.newBuilder()
+            .setSizeBytes(100 * 1024 * 1024) // 100 MB cache
+            .build()
 
         val settings = FirebaseFirestoreSettings.Builder()
             .setLocalCacheSettings(cacheSettings)

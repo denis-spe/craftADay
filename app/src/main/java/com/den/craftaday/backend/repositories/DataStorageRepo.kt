@@ -92,40 +92,52 @@ class DataStorageRepo(
         .dataObjects<DiagramNode>()
 
     override fun addDiagramNode(userId: String, node: DiagramNode) {
+        if (userId.isEmpty()) {
+            Log.e(TAG, "FAILED to add node: userId is empty. Node: ${node.title}")
+            return
+        }
         docRef.document(userId)
             .collection(DIAGRAM_NODES_COLLECTION)
             .add(node)
-            .addOnSuccessListener {
-                Log.w(TAG, "Diagram node added successfully")
+            .addOnSuccessListener { ref ->
+                Log.w(TAG, "SUCCESS: Added node '${node.title}' (ID: ${ref.id}) for user: $userId")
             }
             .addOnFailureListener {
-                Log.e(TAG, "Error adding diagram node: $it")
+                Log.e(TAG, "FAILURE: Error adding node '${node.title}' for user: $userId. Error: ${it.message}", it)
             }
     }
 
     override fun deleteDiagramNode(userId: String, nodeId: String) {
+        if (userId.isEmpty() || nodeId.isEmpty()) {
+            Log.e(TAG, "FAILED to delete node: userId or nodeId is empty. User: $userId, Node: $nodeId")
+            return
+        }
         docRef.document(userId)
             .collection(DIAGRAM_NODES_COLLECTION)
             .document(nodeId)
             .delete()
             .addOnSuccessListener {
-                Log.w(TAG, "Diagram node deleted successfully")
+                Log.w(TAG, "SUCCESS: Deleted node ID: $nodeId for user: $userId")
             }
             .addOnFailureListener {
-                Log.e(TAG, "Error deleting diagram node: $it")
+                Log.e(TAG, "FAILURE: Error deleting node $nodeId for user: $userId. Error: ${it.message}", it)
             }
     }
 
     override fun updateDiagramNode(userId: String, node: DiagramNode) {
+        if (userId.isEmpty() || node.id.isEmpty()) {
+            Log.e(TAG, "FAILED to update node: userId or nodeId is empty. User: $userId, Node: ${node.id}")
+            return
+        }
         docRef.document(userId)
             .collection(DIAGRAM_NODES_COLLECTION)
             .document(node.id)
             .set(node)
             .addOnSuccessListener {
-                Log.w(TAG, "Diagram node updated successfully")
+                Log.w(TAG, "SUCCESS: Updated node '${node.title}' (ID: ${node.id}) for user: $userId")
             }
             .addOnFailureListener {
-                Log.e(TAG, "Error updating diagram node: $it")
+                Log.e(TAG, "FAILURE: Error updating node ${node.id} for user: $userId. Error: ${it.message}", it)
             }
     }
 }

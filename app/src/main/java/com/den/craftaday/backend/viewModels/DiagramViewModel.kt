@@ -5,29 +5,51 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.den.craftaday.backend.dataStructure.DiagramNode
+import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.states.DataState
+import com.den.craftaday.backend.useCase.AuthorizationUseCase
 import com.den.craftaday.backend.useCase.DiagramUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
-import kotlin.random.Random
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class DiagramViewModel @Inject constructor(
-    private val diagramUseCase: DiagramUseCase
+    private val diagramUseCase: DiagramUseCase,
+    authorizationUseCase: AuthorizationUseCase
 ) : ViewModel() {
 
-    val nodes: StateFlow<DataState<List<DiagramNode>>> = diagramUseCase.getDiagramNodes()
-        .onEach { Log.d("DiagramViewModel", "Fetched ${it.size} nodes") }
-        .map { DataState.Success(it) as DataState<List<DiagramNode>> }
-        .catch { 
-            Log.e("DiagramViewModel", "Error fetching nodes", it)
-            emit(DataState.Error(it)) 
+    val nodes: StateFlow<DataState<List<DiagramNode>>> = authorizationUseCase.userState
+        .flatMapLatest { authState ->
+            when (authState) {
+                is AuthState.Authenticated -> {
+                    Log.d("DiagramViewModel", "User authenticated: ${authState.userId}. Starting node observation.")
+                    diagramUseCase.getDiagramNodes()
+                        .onEach { Log.d("DiagramViewModel", "Fetched ${it.size} nodes from cache/server") }
+                        .map { DataState.Success(it) as DataState<List<DiagramNode>> }
+                        .catch { 
+                            Log.e("DiagramViewModel", "Error in diagram flow", it)
+                            emit(DataState.Error(it)) 
+                        }
+                }
+                is AuthState.NotAuthenticated -> {
+                    Log.d("DiagramViewModel", "User not authenticated. Emitting empty success state.")
+                    kotlinx.coroutines.flow.flowOf(DataState.Success(emptyList<DiagramNode>()))
+                }
+                else -> {
+                    Log.d("DiagramViewModel", "Auth state: $authState. Emitting Loading.")
+                    kotlinx.coroutines.flow.flowOf(DataState.Loading)
+                }
+            }
         }
         .stateIn(
             scope = viewModelScope,
