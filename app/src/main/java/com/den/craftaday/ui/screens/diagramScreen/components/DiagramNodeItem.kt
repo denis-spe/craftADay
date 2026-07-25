@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,20 +59,24 @@ fun DiagramNodeItem(
 ) {
     val density = LocalDensity.current
 
-    val accentColor = try {
-        Color(android.graphics.Color.parseColor(node.color))
-    } catch (e: Exception) {
-        MaterialTheme.colorScheme.primary
+    val accentColor = remember(node.color) {
+        try {
+            Color(android.graphics.Color.parseColor(node.color))
+        } catch (e: Exception) {
+            Color(0xFF6200EE) // Fallback to a default color
+        }
     }
 
     val isCompleted = node.status == "COMPLETED"
     val isInProgress = node.status == "IN_PROGRESS"
 
-    val priorityColor = when (node.priority) {
-        "URGENT" -> Color(0xFFD32F2F)
-        "HIGH" -> Color(0xFFF57C00)
-        "MEDIUM" -> Color(0xFF1976D2)
-        else -> Color(0xFF388E3C)
+    val priorityColor = remember(node.priority) {
+        when (node.priority) {
+            "URGENT" -> Color(0xFFD32F2F)
+            "HIGH" -> Color(0xFFF57C00)
+            "MEDIUM" -> Color(0xFF1976D2)
+            else -> Color(0xFF388E3C)
+        }
     }
 
     val shape = RoundedCornerShape(14.dp)

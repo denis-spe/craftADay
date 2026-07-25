@@ -5,21 +5,50 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.den.craftaday.backend.dataStructure.DiagramNode
+import com.den.craftaday.backend.dataStructure.LayoutType
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.useCase.AuthorizationUseCase
 import com.den.craftaday.backend.useCase.DiagramUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
+
+/**
+ * Internal tree node used purely for layout calculations.
+ * `weight` is repurposed per-algorithm (subtree width, subtree height, or leaf count).
+ */
+private class LayoutNode(val node: DiagramNode) {
+    val children = mutableListOf<LayoutNode>()
+    var weight = 0f
+    var x = 0f
+    var y = 0f
+}
+
+/** Builds a parent->children lookup over the flat node list, keyed by node id. */
+private fun buildLayoutTree(currentList: List<DiagramNode>): Pair<Map<String, LayoutNode>, List<LayoutNode>> {
+    val nodeMap = currentList.associate { it.id to LayoutNode(it) }
+    currentList.forEach { node ->
+        if (node.parentId != null) {
+            nodeMap[node.parentId]?.children?.add(nodeMap[node.id]!!)
+        }
+    }
+    val rootLayoutNodes = currentList.filter { it.parentId == null }.mapNotNull { nodeMap[it.id] }
+    return nodeMap to rootLayoutNodes
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -36,9 +65,9 @@ class DiagramViewModel @Inject constructor(
                     diagramUseCase.getDiagramNodes()
                         .onEach { Log.d("DiagramViewModel", "Fetched ${it.size} nodes from cache/server") }
                         .map { DataState.Success(it) as DataState<List<DiagramNode>> }
-                        .catch { 
+                        .catch {
                             Log.e("DiagramViewModel", "Error in diagram flow", it)
-                            emit(DataState.Error(it)) 
+                            emit(DataState.Error(it))
                         }
                 }
                 is AuthState.NotAuthenticated -> {
@@ -56,6 +85,11 @@ class DiagramViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = DataState.Loading
         )
+
+    // Tracks which auto-layout algorithm was last applied, so the canvas
+    // knows how to draw connectors (vertical, horizontal, or radial).
+    private val _layoutType = MutableStateFlow(LayoutType.TOP_DOWN)
+    val layoutType: StateFlow<LayoutType> = _layoutType.asStateFlow()
 
     fun addNode(
         title: String,
@@ -173,58 +207,68 @@ class DiagramViewModel @Inject constructor(
     }
 
     /**
+     * Applies the given auto-layout algorithm to the current node tree.
+     * Remembers the choice in [layoutType] so the canvas can draw
+     * connectors appropriately for that layout's shape.
+     */
+    fun autoLayoutTree(layoutType: LayoutType = LayoutType.TOP_DOWN) {
+        val currentList = (nodes.value as? DataState.Success)?.data ?: return
+        if (currentList.isEmpty()) return
+
+        _layoutType.value = layoutType
+
+        when (layoutType) {
+            LayoutType.TOP_DOWN -> layoutTopDown(currentList)
+            LayoutType.LEFT_RIGHT -> layoutLeftRight(currentList)
+            LayoutType.RADIAL -> layoutRadial(currentList)
+            LayoutType.GRID -> layoutGrid(currentList)
+        }
+    }
+
+    private fun applyPositions(nodeMap: Map<String, LayoutNode>) {
+        nodeMap.values.forEach { layoutNode ->
+            val updated = layoutNode.node.copy(x = layoutNode.x, y = layoutNode.y)
+            if (updated.x != layoutNode.node.x || updated.y != layoutNode.node.y) {
+                diagramUseCase.updateDiagramNode(updated)
+            }
+        }
+    }
+
+    /**
      * Top-to-Bottom Auto-Layout Algorithm:
      * Calculates hierarchical widths and positions root nodes and subtrees
      * wide across the top-to-bottom layout with zero node overlaps.
      */
-    fun autoLayoutTree() {
-        val currentList = (nodes.value as? DataState.Success)?.data ?: return
-        if (currentList.isEmpty()) return
-
+    private fun layoutTopDown(currentList: List<DiagramNode>) {
         val cardWidthDp = 200f
         val nodeGapDp = 40f
         val levelHeightDp = 180f
 
-        class LayoutNode(val node: DiagramNode) {
-            val children = mutableListOf<LayoutNode>()
-            var subtreeWidth = cardWidthDp
-            var x = 0f
-            var y = 0f
-        }
-
-        val nodeMap = currentList.associate { it.id to LayoutNode(it) }
-        currentList.forEach { node ->
-            if (node.parentId != null) {
-                nodeMap[node.parentId]?.children?.add(nodeMap[node.id]!!)
-            }
-        }
+        val (nodeMap, rootLayoutNodes) = buildLayoutTree(currentList)
 
         fun calculateSubtreeWidth(layoutNode: LayoutNode): Float {
             if (layoutNode.children.isEmpty()) {
-                layoutNode.subtreeWidth = cardWidthDp
+                layoutNode.weight = cardWidthDp
             } else {
                 var sumWidth = 0f
                 layoutNode.children.forEach { child ->
                     sumWidth += calculateSubtreeWidth(child)
                 }
                 sumWidth += (layoutNode.children.size - 1) * nodeGapDp
-                layoutNode.subtreeWidth = maxOf(cardWidthDp, sumWidth)
+                layoutNode.weight = maxOf(cardWidthDp, sumWidth)
             }
-            return layoutNode.subtreeWidth
+            return layoutNode.weight
         }
-
-        val rootNodes = currentList.filter { it.parentId == null }
-        val rootLayoutNodes = rootNodes.mapNotNull { nodeMap[it.id] }
         rootLayoutNodes.forEach { calculateSubtreeWidth(it) }
 
         fun assignPositions(layoutNode: LayoutNode, startX: Float, currentY: Float) {
             layoutNode.y = currentY
-            layoutNode.x = startX + (layoutNode.subtreeWidth / 2f) - (cardWidthDp / 2f)
+            layoutNode.x = startX + (layoutNode.weight / 2f) - (cardWidthDp / 2f)
 
             var childX = startX
             layoutNode.children.forEach { child ->
                 assignPositions(child, childX, currentY + levelHeightDp)
-                childX += child.subtreeWidth + nodeGapDp
+                childX += child.weight + nodeGapDp
             }
         }
 
@@ -233,15 +277,153 @@ class DiagramViewModel @Inject constructor(
 
         rootLayoutNodes.forEach { root ->
             assignPositions(root, currentRootX, startY)
-            currentRootX += root.subtreeWidth + (nodeGapDp * 1.5f)
+            currentRootX += root.weight + (nodeGapDp * 1.5f)
         }
 
-        nodeMap.values.forEach { layoutNode ->
-            val updated = layoutNode.node.copy(x = layoutNode.x, y = layoutNode.y)
-            if (updated.x != layoutNode.node.x || updated.y != layoutNode.node.y) {
-                diagramUseCase.updateDiagramNode(updated)
+        applyPositions(nodeMap)
+    }
+
+    /**
+     * Left-to-Right Auto-Layout Algorithm:
+     * Mirror of the top-down algorithm along the other axis — levels grow
+     * horizontally, siblings stack vertically with zero overlaps.
+     */
+    private fun layoutLeftRight(currentList: List<DiagramNode>) {
+        val cardHeightDp = 110f
+        val nodeGapDp = 30f
+        val levelWidthDp = 260f
+
+        val (nodeMap, rootLayoutNodes) = buildLayoutTree(currentList)
+
+        fun calculateSubtreeHeight(layoutNode: LayoutNode): Float {
+            if (layoutNode.children.isEmpty()) {
+                layoutNode.weight = cardHeightDp
+            } else {
+                var sumHeight = 0f
+                layoutNode.children.forEach { child ->
+                    sumHeight += calculateSubtreeHeight(child)
+                }
+                sumHeight += (layoutNode.children.size - 1) * nodeGapDp
+                layoutNode.weight = maxOf(cardHeightDp, sumHeight)
+            }
+            return layoutNode.weight
+        }
+        rootLayoutNodes.forEach { calculateSubtreeHeight(it) }
+
+        fun assignPositions(layoutNode: LayoutNode, startY: Float, currentX: Float) {
+            layoutNode.x = currentX
+            layoutNode.y = startY + (layoutNode.weight / 2f) - (cardHeightDp / 2f)
+
+            var childY = startY
+            layoutNode.children.forEach { child ->
+                assignPositions(child, childY, currentX + levelWidthDp)
+                childY += child.weight + nodeGapDp
             }
         }
+
+        var currentRootY = 60f
+        val startX = 60f
+
+        rootLayoutNodes.forEach { root ->
+            assignPositions(root, currentRootY, startX)
+            currentRootY += root.weight + (nodeGapDp * 1.5f)
+        }
+
+        applyPositions(nodeMap)
+    }
+
+    /**
+     * Radial Auto-Layout Algorithm:
+     * Places each root at the center of its own ring system and fans children
+     * out over concentric circles, giving each subtree an angular slice
+     * proportional to its leaf count so dense branches get more room.
+     */
+    private fun layoutRadial(currentList: List<DiagramNode>) {
+        val ringRadiusStepDp = 240f
+        val centerX = 900f
+        val centerY = 700f
+
+        val (nodeMap, rootLayoutNodes) = buildLayoutTree(currentList)
+
+        fun countLeaves(layoutNode: LayoutNode): Float {
+            val leaves = if (layoutNode.children.isEmpty()) {
+                1f
+            } else {
+                layoutNode.children.sumOf { countLeaves(it).toDouble() }.toFloat()
+            }
+            layoutNode.weight = leaves
+            return leaves
+        }
+        rootLayoutNodes.forEach { countLeaves(it) }
+        val totalLeaves = rootLayoutNodes.sumOf { it.weight.toDouble() }.toFloat().coerceAtLeast(1f)
+
+        fun assignPositions(layoutNode: LayoutNode, startAngleDeg: Float, spanDeg: Float, depth: Int) {
+            val angleDeg = startAngleDeg + spanDeg / 2f
+            val radius = depth * ringRadiusStepDp
+            val radians = Math.toRadians(angleDeg.toDouble())
+            layoutNode.x = centerX + (radius * cos(radians)).toFloat()
+            layoutNode.y = centerY + (radius * sin(radians)).toFloat()
+
+            var childAngleCursor = startAngleDeg
+            layoutNode.children.forEach { child ->
+                val childSpan = spanDeg * (child.weight / layoutNode.weight)
+                assignPositions(child, childAngleCursor, childSpan, depth + 1)
+                childAngleCursor += childSpan
+            }
+        }
+
+        var angleCursor = 0f
+        rootLayoutNodes.forEach { root ->
+            val rootSpan = 360f * (root.weight / totalLeaves)
+            assignPositions(root, angleCursor, rootSpan, 1)
+            angleCursor += rootSpan
+        }
+
+        // Single-root trees look best centered rather than offset onto ring 1.
+        if (rootLayoutNodes.size == 1) {
+            rootLayoutNodes[0].x = centerX
+            rootLayoutNodes[0].y = centerY
+        }
+
+        applyPositions(nodeMap)
+    }
+
+    /**
+     * Grid Auto-Layout Algorithm:
+     * Ignores hierarchy and packs every node into an even grid, ordered by
+     * depth then title, for a compact overview of everything at once.
+     */
+    private fun layoutGrid(currentList: List<DiagramNode>) {
+        val cardWidthDp = 200f
+        val cardHeightDp = 130f
+        val gapDp = 40f
+        val columns = ceil(sqrt(currentList.size.toDouble())).toInt().coerceAtLeast(1)
+
+        val (nodeMap, _) = buildLayoutTree(currentList)
+        val byId = currentList.associateBy { it.id }
+
+        fun depthOf(node: DiagramNode): Int {
+            var depth = 0
+            var current = node
+            while (current.parentId != null) {
+                val parent = byId[current.parentId] ?: break
+                depth++
+                current = parent
+            }
+            return depth
+        }
+
+        val ordered = currentList.sortedWith(compareBy({ depthOf(it) }, { it.title }))
+
+        ordered.forEachIndexed { index, node ->
+            val row = index / columns
+            val col = index % columns
+            val layoutNode = nodeMap[node.id] ?: return@forEachIndexed
+            layoutNode.x = 60f + col * (cardWidthDp + gapDp)
+            layoutNode.y = 80f + row * (cardHeightDp + gapDp)
+        }
+
+        applyPositions(nodeMap)
     }
 
 }

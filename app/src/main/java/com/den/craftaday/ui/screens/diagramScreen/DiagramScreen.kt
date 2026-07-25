@@ -23,28 +23,38 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,57 +68,108 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.den.craftaday.backend.dataStructure.DiagramNode
+import com.den.craftaday.backend.dataStructure.LayoutType
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.DiagramViewModel
 import com.den.craftaday.ui.screens.diagramScreen.components.DiagramNodeItem
 import com.den.craftaday.ui.screens.diagramScreen.components.EditTaskNodeDialog
+import kotlinx.coroutines.launch
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import androidx.core.graphics.toColorInt
+import com.den.craftaday.ui.screens.diagramScreen.components.DiagramFloatingButton
 
+/** dp-space anchor points for the connector between a parent and a child node. */
+private data class ConnectorAnchors(
+    val startXDp: Float,
+    val startYDp: Float,
+    val endXDp: Float,
+    val endYDp: Float
+)
+
+private const val CARD_WIDTH_DP = 200f
+private const val CARD_HEIGHT_DP = 110f
+private const val ARROW_GAP_DP = 4f
+
+/**
+ * Picks where the connector line touches each card, based on which
+ * auto-layout algorithm is currently active — bottom-to-top for the
+ * top-down tree, right-to-left for the horizontal tree, and center-to-center
+ * for the radial/grid layouts where the tree shape isn't spatially implied.
+ */
+private fun computeConnectorAnchors(
+    parent: DiagramNode,
+    node: DiagramNode,
+    layoutType: LayoutType
+): ConnectorAnchors = when (layoutType) {
+    LayoutType.TOP_DOWN -> ConnectorAnchors(
+        startXDp = parent.x + CARD_WIDTH_DP / 2f,
+        startYDp = parent.y + CARD_HEIGHT_DP - 2f,
+        endXDp = node.x + CARD_WIDTH_DP / 2f,
+        endYDp = node.y
+    )
+    LayoutType.LEFT_RIGHT -> ConnectorAnchors(
+        startXDp = parent.x + CARD_WIDTH_DP,
+        startYDp = parent.y + CARD_HEIGHT_DP / 2f,
+        endXDp = node.x,
+        endYDp = node.y + CARD_HEIGHT_DP / 2f
+    )
+    LayoutType.RADIAL, LayoutType.GRID -> ConnectorAnchors(
+        startXDp = parent.x + CARD_WIDTH_DP / 2f,
+        startYDp = parent.y + CARD_HEIGHT_DP / 2f,
+        endXDp = node.x + CARD_WIDTH_DP / 2f,
+        endYDp = node.y + CARD_HEIGHT_DP / 2f
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiagramScreen(
     viewModel: DiagramViewModel
 ) {
     val nodesState by viewModel.nodes.collectAsStateWithLifecycle()
+    val currentLayoutType by viewModel.layoutType.collectAsStateWithLifecycle()
 
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
+    val scale = remember { mutableFloatStateOf(1f) }
+    val offset = remember { mutableStateOf(Offset.Zero) }
 
     var editingNode by remember { mutableStateOf<DiagramNode?>(null) }
-    var isCreatingRoot by remember { mutableStateOf(false) }
+    var isCreatingRoot = remember { mutableStateOf(false) }
     var creatingChildForParentId by remember { mutableStateOf<String?>(null) }
 
-    var selectedStatusFilter by remember { mutableStateOf("ALL") }
-    var selectedPriorityFilter by remember { mutableStateOf("ALL") }
+    val selectedStatusFilter = remember { mutableStateOf("ALL") }
+    val selectedPriorityFilter = remember { mutableStateOf("ALL") }
+
+    val sheetState = rememberModalBottomSheetState()
+    val showLayoutSheet = remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
-        scale = (scale * zoomChange).coerceIn(0.2f, 3f)
-        offset += offsetChange
+        scale.floatValue = (scale.floatValue * zoomChange).coerceIn(0.2f, 3f)
+        offset.value += offsetChange
     }
 
     Scaffold(
         floatingActionButton = {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Auto-Layout Tree Button
-                ExtendedFloatingActionButton(
-                    onClick = { viewModel.autoLayoutTree() },
-                    icon = { Icon(Icons.Default.AccountTree, contentDescription = "Auto Layout") },
-                    text = { Text("Auto Layout") },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                )
+            DiagramFloatingButton(
+                viewModel = viewModel,
+                showLayoutSheet = showLayoutSheet,
+                isCreatingRoot = isCreatingRoot,
+                currentLayoutType = currentLayoutType
+            )
+        },
 
-                // Add Root Project Node FAB
-                ExtendedFloatingActionButton(
-                    onClick = { isCreatingRoot = true },
-                    icon = { Icon(Icons.Default.Add, contentDescription = "Add Root Node") },
-                    text = { Text("Root Project") },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White
-                )
-            }
+        topBar = {
+            DiagramTopBar(
+                projectName = "Project Name",
+                viewModel = viewModel,
+                currentLayoutType = currentLayoutType,
+                scale = scale,
+                offset = offset
+            )
         }
+
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -125,10 +186,10 @@ fun DiagramScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer(
-                            scaleX = scale,
-                            scaleY = scale,
-                            translationX = offset.x,
-                            translationY = offset.y
+                            scaleX = scale.floatValue,
+                            scaleY = scale.floatValue,
+                            translationX = offset.value.x,
+                            translationY = offset.value.y
                         )
                 ) {
                     when (val result = nodesState) {
@@ -156,56 +217,94 @@ fun DiagramScreen(
                         is DataState.Success -> {
                             val allNodes = result.data
 
-                            val filteredNodes = allNodes.filter { node ->
-                                val statusMatch = selectedStatusFilter == "ALL" || node.status == selectedStatusFilter
-                                val priorityMatch = selectedPriorityFilter == "ALL" || node.priority == selectedPriorityFilter
-                                statusMatch && priorityMatch
+                            // PERFORMANCE: Pre-calculate node lookup and connectors
+                            val nodeMap = remember(allNodes) { allNodes.associateBy { it.id } }
+                            
+                            val filteredNodes = remember(allNodes, selectedStatusFilter, selectedPriorityFilter) {
+                                allNodes.filter { node ->
+                                    val statusMatch = selectedStatusFilter.value == "ALL" || node.status == selectedStatusFilter.value
+                                    val priorityMatch = selectedPriorityFilter.value == "ALL" || node.priority == selectedPriorityFilter.value
+                                    statusMatch && priorityMatch
+                                }
                             }
 
-                             // Draw Top-to-Bottom Flowing Connectors
+                            val connectorLines = remember(allNodes, currentLayoutType) {
+                                allNodes.mapNotNull { node ->
+                                    val parent = nodeMap[node.parentId ?: ""] ?: return@mapNotNull null
+                                    node to parent
+                                }
+                            }
+
+                            // Draw Connectors — shape depends on the active layout algorithm
                             Canvas(modifier = Modifier.fillMaxSize()) {
-                                allNodes.forEach { node ->
-                                    val parent = allNodes.find { it.id == node.parentId }
-                                    if (parent != null) {
-                                        // Parent bottom-center connection point
-                                        val startX = (parent.x + 100f).dp.toPx()
-                                        val startY = (parent.y + 105f).dp.toPx()
+                                connectorLines.forEach { (node, parent) ->
+                                    val anchors = computeConnectorAnchors(parent, node, currentLayoutType)
+                                    val startX = anchors.startXDp.dp.toPx()
+                                    val startY = anchors.startYDp.dp.toPx()
+                                    val endX = anchors.endXDp.dp.toPx()
+                                    val endY = anchors.endYDp.dp.toPx()
 
-                                        // Child top-center connection point
-                                        val endX = (node.x + 100f).dp.toPx()
-                                        val endY = node.y.dp.toPx()
-
-                                        // Smooth Top-to-Bottom Bezier Curve
-                                        val deltaY = endY - startY
-                                        val controlY1 = startY + (deltaY * 0.5f)
-                                        val controlY2 = endY - (deltaY * 0.5f)
-
-                                        val path = Path().apply {
-                                            moveTo(startX, startY)
-                                            cubicTo(
-                                                startX, controlY1,
-                                                endX, controlY2,
-                                                endX, endY
-                                            )
+                                    val path = Path().apply {
+                                        moveTo(startX, startY)
+                                        when (currentLayoutType) {
+                                            LayoutType.TOP_DOWN -> {
+                                                val deltaY = endY - startY
+                                                cubicTo(
+                                                    startX, startY + deltaY * 0.5f,
+                                                    endX, endY - deltaY * 0.5f,
+                                                    endX, endY
+                                                )
+                                            }
+                                            LayoutType.LEFT_RIGHT -> {
+                                                val deltaX = endX - startX
+                                                cubicTo(
+                                                    startX + deltaX * 0.5f, startY,
+                                                    endX - deltaX * 0.5f, endY,
+                                                    endX, endY
+                                                )
+                                            }
+                                            LayoutType.RADIAL, LayoutType.GRID -> {
+                                                lineTo(endX, endY)
+                                            }
                                         }
+                                    }
 
-                                        val lineColor = try {
-                                            Color(android.graphics.Color.parseColor(node.color))
-                                        } catch (e: Exception) {
-                                            Color.Gray
-                                        }
+                                    val lineColor = try {
+                                        Color(node.color.toColorInt())
+                                    } catch (e: Exception) {
+                                        Color.Gray
+                                    }
 
-                                        drawPath(
-                                            path = path,
-                                            color = lineColor.copy(alpha = 0.6f),
-                                            style = Stroke(width = 2.5.dp.toPx())
-                                        )
+                                    drawPath(
+                                        path = path,
+                                        color = lineColor.copy(alpha = 0.6f),
+                                        style = Stroke(width = 2.5.dp.toPx())
+                                    )
 
-                                        // Draw Downward Arrowhead at child top connection point
+                                    // IMPROVED ARROWHEAD: only shown in Radial/Grid where direction isn't spatially implied
+                                    if (currentLayoutType == LayoutType.RADIAL || currentLayoutType == LayoutType.GRID) {
+                                        val angle = atan2((endY - startY), (endX - startX))
+                                        val gap = ARROW_GAP_DP.dp.toPx()
+
+                                        // The tip of the arrow slightly before the actual endX, endY
+                                        val tipX = endX - gap * cos(angle)
+                                        val tipY = endY - gap * sin(angle)
+
+                                        val arrowLength = 12.dp.toPx()
+                                        val arrowSpread = 0.4f
                                         val arrowPath = Path().apply {
-                                            moveTo(endX, endY)
-                                            lineTo(endX - 6.dp.toPx(), endY - 10.dp.toPx())
-                                            lineTo(endX + 6.dp.toPx(), endY - 10.dp.toPx())
+                                            moveTo(tipX, tipY)
+                                            lineTo(
+                                                tipX - arrowLength * cos(angle - arrowSpread),
+                                                tipY - arrowLength * sin(angle - arrowSpread)
+                                            )
+                                            // Slight curve/swept back effect
+                                            quadraticTo(
+                                                tipX - arrowLength * 0.7f * cos(angle),
+                                                tipY - arrowLength * 0.7f * sin(angle),
+                                                tipX - arrowLength * cos(angle + arrowSpread),
+                                                tipY - arrowLength * sin(angle + arrowSpread)
+                                            )
                                             close()
                                         }
                                         drawPath(path = arrowPath, color = lineColor)
@@ -228,124 +327,15 @@ fun DiagramScreen(
                     }
                 }
             }
-
-            // Top Header Overlay Toolbar
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                shape = RoundedCornerShape(16.dp),
-                tonalElevation = 6.dp,
-                shadowElevation = 6.dp,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Project Task Tree",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Top-to-bottom infinite node planner",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        // Zoom Controls & Reset View
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            IconButton(onClick = { scale = (scale + 0.2f).coerceAtMost(3f) }) {
-                                Icon(Icons.Default.ZoomIn, contentDescription = "Zoom In")
-                            }
-                            IconButton(onClick = { scale = (scale - 0.2f).coerceAtLeast(0.3f) }) {
-                                Icon(Icons.Default.ZoomOut, contentDescription = "Zoom Out")
-                            }
-                            IconButton(onClick = {
-                                scale = 1f
-                                offset = Offset.Zero
-                            }) {
-                                Icon(Icons.Default.CenterFocusStrong, contentDescription = "Reset View")
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Status Filter Chips
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Status:",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        listOf("ALL", "TODO", "IN_PROGRESS", "COMPLETED").forEach { filter ->
-                            FilterChip(
-                                selected = selectedStatusFilter == filter,
-                                onClick = { selectedStatusFilter = filter },
-                                label = {
-                                    Text(
-                                        text = filter.replace("_", " "),
-                                        fontSize = 10.sp
-                                    )
-                                }
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Priority Filter Chips
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Priority:",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        listOf("ALL", "LOW", "MEDIUM", "HIGH", "URGENT").forEach { filter ->
-                            FilterChip(
-                                selected = selectedPriorityFilter == filter,
-                                onClick = { selectedPriorityFilter = filter },
-                                label = {
-                                    Text(
-                                        text = filter,
-                                        fontSize = 10.sp
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 
     // Dialog for creating a Root Node
-    if (isCreatingRoot) {
+    if (isCreatingRoot.value) {
         EditTaskNodeDialog(
             node = null,
             isCreatingRoot = true,
-            onDismiss = { isCreatingRoot = false },
+            onDismiss = { isCreatingRoot.value = false },
             onSave = { title, description, priority, status, color ->
                 viewModel.addNode(
                     title = title,
@@ -355,7 +345,7 @@ fun DiagramScreen(
                     color = color,
                     parentId = null
                 )
-                isCreatingRoot = false
+                isCreatingRoot.value = false
             }
         )
     }
@@ -405,4 +395,106 @@ fun DiagramScreen(
             }
         )
     }
+
+    // Modal Bottom Sheet for Layout Selection
+    if (showLayoutSheet.value) {
+        ModalBottomSheet(
+            onDismissRequest = { showLayoutSheet.value = false },
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Select Layout Strategy",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                LayoutType.entries.forEach { type ->
+                    val isSelected = type == currentLayoutType
+                    Surface(
+                        onClick = {
+                            scope.launch {
+                                viewModel.autoLayoutTree(type)
+                                sheetState.hide()
+                            }.invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    showLayoutSheet.value = false
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        ListItem(
+                            headlineContent = { 
+                                Text(
+                                    text = type.label,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                ) 
+                            },
+                            leadingContent = {
+                                Icon(
+                                    imageVector = when (type) {
+                                        LayoutType.TOP_DOWN -> Icons.Default.AccountTree
+                                        LayoutType.LEFT_RIGHT -> Icons.Default.AccountTree // Should maybe use different icons
+                                        LayoutType.RADIAL -> Icons.Default.FilterList
+                                        LayoutType.GRID -> Icons.Default.Delete
+                                    },
+                                    contentDescription = null,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            trailingContent = {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+                            colors = androidx.compose.material3.ListItemDefaults.colors(
+                                containerColor = Color.Transparent
+                            )
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DiagramTopBar(
+    projectName: String,
+    viewModel: DiagramViewModel,
+    currentLayoutType: LayoutType,
+    scale: MutableState<Float>,
+    offset: MutableState<Offset>
+) {
+    TopAppBar(
+        title = { Text(text = projectName) },
+        actions = {
+            IconButton(onClick = { scale.value = (scale.value + 0.2f).coerceAtMost(3f) }) {
+                Icon(Icons.Default.ZoomIn, contentDescription = "Zoom In")
+            }
+            IconButton(onClick = { scale.value = (scale.value - 0.2f).coerceAtLeast(0.3f) }) {
+                Icon(Icons.Default.ZoomOut, contentDescription = "Zoom Out")
+            }
+            IconButton(onClick = {
+                scale.value = 1f
+                offset.value = Offset.Zero
+            }) {
+                Icon(Icons.Default.CenterFocusStrong, contentDescription = "Reset View")
+            }
+        }
+    )
 }
