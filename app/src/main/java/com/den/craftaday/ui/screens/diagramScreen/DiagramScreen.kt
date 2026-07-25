@@ -88,6 +88,26 @@ private fun computeConnectorAnchors(
         endXDp = node.x + CARD_WIDTH_DP / 2f,
         endYDp = node.y + CARD_HEIGHT_DP / 2f
     )
+    LayoutType.MIND_MAP -> {
+        // Decide edge based on horizontal direction
+        if (node.x > parent.x) {
+            // Growing Right
+            ConnectorAnchors(
+                startXDp = parent.x + CARD_WIDTH_DP,
+                startYDp = parent.y + CARD_HEIGHT_DP / 2f,
+                endXDp = node.x,
+                endYDp = node.y + CARD_HEIGHT_DP / 2f
+            )
+        } else {
+            // Growing Left
+            ConnectorAnchors(
+                startXDp = parent.x,
+                startYDp = parent.y + CARD_HEIGHT_DP / 2f,
+                endXDp = node.x + CARD_WIDTH_DP,
+                endYDp = node.y + CARD_HEIGHT_DP / 2f
+            )
+        }
+    }
 }
 
 
@@ -215,8 +235,8 @@ fun DiagramScreen(
             screenWidthPx.floatValue = with(density) { maxWidth.toPx() }
             screenHeightPx.floatValue = with(density) { maxHeight.toPx() }
 
-            // Auto-center and zoom out on initial load
-            LaunchedEffect(nodesState, currentLayoutType) {
+            // Auto-center and zoom out on initial load or layout change
+            LaunchedEffect(nodesState) {
                 if (!hasInitialized && nodesState is DataState.Success) {
                     val nodes = (nodesState as DataState.Success).data
                     if (nodes.isNotEmpty()) {
@@ -231,6 +251,23 @@ fun DiagramScreen(
                         hasInitialized = true
                     } else {
                         hasInitialized = true
+                    }
+                }
+            }
+
+            // Always recenter when layout type changes to keep nodes in view
+            LaunchedEffect(currentLayoutType) {
+                if (hasInitialized && nodesState is DataState.Success) {
+                    val nodes = (nodesState as DataState.Success).data
+                    if (nodes.isNotEmpty()) {
+                        recenter(
+                            nodes = nodes,
+                            scale = scale,
+                            offset = offset,
+                            screenWidthPx = screenWidthPx,
+                            screenHeightPx = screenHeightPx,
+                            density = density
+                        )
                     }
                 }
             }
@@ -314,7 +351,7 @@ fun DiagramScreen(
                                                     endX, endY
                                                 )
                                             }
-                                            LayoutType.LEFT_RIGHT -> {
+                                            LayoutType.LEFT_RIGHT, LayoutType.MIND_MAP -> {
                                                 val deltaX = endX - startX
                                                 cubicTo(
                                                     startX + deltaX * 0.5f, startY,
@@ -399,7 +436,7 @@ fun DiagramScreen(
             node = null,
             isCreatingRoot = true,
             onDismiss = { isCreatingRoot.value = false },
-            onSave = { title, description, priority, status, color ->
+            onSave = { title, description, priority, status, color, side ->
                 viewModel.addNode(
                     projectId = projectId,
                     title = title,
@@ -407,6 +444,7 @@ fun DiagramScreen(
                     priority = priority,
                     status = status,
                     color = color,
+                    side = side,
                     parentId = null
                 )
                 isCreatingRoot.value = false
@@ -422,7 +460,7 @@ fun DiagramScreen(
             isCreatingChild = true,
             initialColor = parentNode?.color,
             onDismiss = { creatingChildForParentId = null },
-            onSave = { title, description, priority, status, color ->
+            onSave = { title, description, priority, status, color, side ->
                 viewModel.addNode(
                     projectId = projectId,
                     title = title,
@@ -430,6 +468,7 @@ fun DiagramScreen(
                     priority = priority,
                     status = status,
                     color = color,
+                    side = side,
                     parentId = creatingChildForParentId
                 )
                 creatingChildForParentId = null
@@ -442,7 +481,7 @@ fun DiagramScreen(
         EditTaskNodeDialog(
             node = editingNode,
             onDismiss = { editingNode = null },
-            onSave = { title, description, priority, status, color ->
+            onSave = { title, description, priority, status, color, side ->
                 viewModel.updateNodeDetails(
                     projectId = projectId,
                     editingNode!!.copy(
@@ -450,7 +489,8 @@ fun DiagramScreen(
                         description = description,
                         priority = priority,
                         status = status,
-                        color = color
+                        color = color,
+                        side = side
                     )
                 )
                 editingNode = null
@@ -473,7 +513,22 @@ fun DiagramScreen(
             showLayoutSheet = showLayoutSheet,
             currentLayoutType = currentLayoutType,
             sheetState = sheetState,
-            scope = scope
+            scope = scope,
+            onLayoutSelected = {
+                if (nodesState is DataState.Success) {
+                    val nodes = (nodesState as DataState.Success).data
+                    if (nodes.isNotEmpty()) {
+                        recenter(
+                            nodes = nodes,
+                            scale = scale,
+                            offset = offset,
+                            screenWidthPx = screenWidthPx,
+                            screenHeightPx = screenHeightPx,
+                            density = density
+                        )
+                    }
+                }
+            }
         )
     }
 }

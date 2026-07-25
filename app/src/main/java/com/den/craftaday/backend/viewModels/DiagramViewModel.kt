@@ -142,6 +142,7 @@ class DiagramViewModel @Inject constructor(
         priority: String = "MEDIUM",
         status: String = "TODO",
         color: String = "#3F51B5",
+        side: String = "RIGHT",
         parentId: String? = null,
         x: Float = 0f,
         y: Float = 0f
@@ -168,10 +169,10 @@ class DiagramViewModel @Inject constructor(
                 if (parent != null) {
                     val siblings = currentList.filter { it.parentId == parentId }
                     if (siblings.isEmpty()) {
-                        calculatedX = parent.x
+                        calculatedX = if (side == "LEFT") parent.x - 240f else parent.x + 240f
                     } else {
                         val maxSiblingX = siblings.maxOf { it.x }
-                        calculatedX = maxSiblingX + 240f
+                        calculatedX = if (side == "LEFT") maxSiblingX - 240f else maxSiblingX + 240f
                     }
                     calculatedY = parent.y + 180f
                 } else {
@@ -190,6 +191,7 @@ class DiagramViewModel @Inject constructor(
             x = calculatedX,
             y = calculatedY,
             color = color,
+            side = side,
             nodeType = if (parentId == null) "ROOT" else "TASK"
         )
         diagramUseCase.addDiagramNode( projectId, node =  newNode)
@@ -280,6 +282,7 @@ class DiagramViewModel @Inject constructor(
             LayoutType.LEFT_RIGHT -> layoutLeftRight(projectId, currentList)
             LayoutType.RADIAL -> layoutRadial(projectId, currentList)
             LayoutType.GRID -> layoutGrid(projectId, currentList)
+            LayoutType.MIND_MAP -> layoutMindMap(projectId, currentList)
         }
     }
 
@@ -491,6 +494,84 @@ class DiagramViewModel @Inject constructor(
             val layoutNode = nodeMap[node.id] ?: return@forEachIndexed
             layoutNode.x = 60f + col * (cardWidthDp + gapDp)
             layoutNode.y = 80f + row * (cardHeightDp + gapDp)
+        }
+
+        applyPositions(projectId, nodeMap)
+    }
+
+    /**
+     * Mind Map Auto-Layout Algorithm:
+     * Places the root node(s) in the center. Primary children are split between
+     * left and right sides. Subtrees grow outwards horizontally with zero overlaps.
+     */
+    private fun layoutMindMap(
+        projectId: String,
+        currentList: List<DiagramNode>
+    ) {
+        val cardHeightDp = 110f
+        val nodeGapDp = 30f
+        val levelWidthDp = 260f
+        val centerX = 900f
+        val startY = 400f
+
+        val (nodeMap, rootLayoutNodes) = buildLayoutTree(currentList)
+
+        fun calculateSubtreeHeight(layoutNode: LayoutNode): Float {
+            if (layoutNode.children.isEmpty()) {
+                layoutNode.weight = cardHeightDp
+            } else {
+                var sumHeight = 0f
+                layoutNode.children.forEach { child ->
+                    sumHeight += calculateSubtreeHeight(child)
+                }
+                sumHeight += (layoutNode.children.size - 1) * nodeGapDp
+                layoutNode.weight = maxOf(cardHeightDp, sumHeight)
+            }
+            return layoutNode.weight
+        }
+
+        fun assignPositions(layoutNode: LayoutNode, startY: Float, currentX: Float, direction: Float) {
+            layoutNode.x = currentX
+            layoutNode.y = startY + (layoutNode.weight / 2f) - (cardHeightDp / 2f)
+
+            var childY = startY
+            layoutNode.children.forEach { child ->
+                assignPositions(child, childY, currentX + (direction * levelWidthDp), direction)
+                childY += child.weight + nodeGapDp
+            }
+        }
+
+        var currentRootY = startY
+        rootLayoutNodes.forEach { root ->
+            val rightChildren = root.children.filter { it.node.side == "RIGHT" }
+            val leftChildren = root.children.filter { it.node.side == "LEFT" }
+
+            val rightHeight = if (rightChildren.isEmpty()) cardHeightDp else rightChildren.sumOf { calculateSubtreeHeight(it).toDouble() }.toFloat() + (rightChildren.size - 1) * nodeGapDp
+            val leftHeight = if (leftChildren.isEmpty()) cardHeightDp else leftChildren.sumOf { calculateSubtreeHeight(it).toDouble() }.toFloat() + (leftChildren.size - 1) * nodeGapDp
+            
+            root.weight = maxOf(rightHeight, leftHeight)
+            root.x = centerX
+            root.y = currentRootY + (root.weight / 2f) - (cardHeightDp / 2f)
+
+            // Layout Right side
+            if (rightChildren.isNotEmpty()) {
+                var rightStartY = root.y + (cardHeightDp / 2f) - rightHeight / 2f
+                rightChildren.forEach { child ->
+                    assignPositions(child, rightStartY, centerX + levelWidthDp, 1f)
+                    rightStartY += child.weight + nodeGapDp
+                }
+            }
+
+            // Layout Left side
+            if (leftChildren.isNotEmpty()) {
+                var leftStartY = root.y + (cardHeightDp / 2f) - leftHeight / 2f
+                leftChildren.forEach { child ->
+                    assignPositions(child, leftStartY, centerX - levelWidthDp, -1f)
+                    leftStartY += child.weight + nodeGapDp
+                }
+            }
+
+            currentRootY += root.weight + (nodeGapDp * 1.5f)
         }
 
         applyPositions(projectId, nodeMap)

@@ -17,5 +17,6 @@ data class DiagramNode(
     val x: Float = 0f,
     val y: Float = 0f,
     val color: String = "#3F51B5",
+    val side: String = "RIGHT", // "LEFT", "RIGHT"
     val nodeType: String = "TASK" // "ROOT", "TASK"
 )

@@ -7,5 +7,6 @@ enum class LayoutType(val label: String) {
     TOP_DOWN("Top to Bottom"),
     LEFT_RIGHT("Left to Right"),
     RADIAL("Radial"),
-    GRID("Grid")
+    GRID("Grid"),
+    MIND_MAP("Mind Map")
 }

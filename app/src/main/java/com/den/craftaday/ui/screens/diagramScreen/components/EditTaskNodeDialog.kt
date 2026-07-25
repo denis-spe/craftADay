@@ -53,6 +53,7 @@ val PRESET_COLORS = listOf(
 
 val PRIORITIES = listOf("LOW", "MEDIUM", "HIGH", "URGENT")
 val STATUSES = listOf("TODO", "IN_PROGRESS", "COMPLETED")
+val SIDES = listOf("LEFT", "RIGHT")
 
 @Composable
 fun EditTaskNodeDialog(
@@ -61,13 +62,14 @@ fun EditTaskNodeDialog(
     isCreatingChild: Boolean = false,
     initialColor: String? = null,
     onDismiss: () -> Unit,
-    onSave: (title: String, description: String, priority: String, status: String, color: String) -> Unit,
+    onSave: (title: String, description: String, priority: String, status: String, color: String, side: String) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
     var title by remember(node) { mutableStateOf(node?.title ?: "") }
     var description by remember(node) { mutableStateOf(node?.description ?: "") }
     var priority by remember(node) { mutableStateOf(node?.priority ?: "MEDIUM") }
     var status by remember(node) { mutableStateOf(node?.status ?: "TODO") }
+    var side by remember(node) { mutableStateOf(node?.side ?: "RIGHT") }
     var selectedColor by remember(node) { 
         mutableStateOf(node?.color ?: initialColor ?: "#3F51B5") 
     }
@@ -144,6 +146,25 @@ fun EditTaskNodeDialog(
                     }
                 }
 
+                // Side Selection (Only for Mind Map relevance, hidden for roots)
+                if (!isCreatingRoot && node?.nodeType != "ROOT") {
+                    Column {
+                        Text("Mind Map Side", style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            SIDES.forEach { sd ->
+                                FilterChip(
+                                    selected = side == sd,
+                                    onClick = { side = sd },
+                                    label = { Text(sd, style = MaterialTheme.typography.labelSmall) }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Color Selection
                 Column {
                     Text("Color Tag", style = MaterialTheme.typography.labelMedium)
@@ -178,7 +199,7 @@ fun EditTaskNodeDialog(
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
-                        onSave(title, description, priority, status, selectedColor)
+                        onSave(title, description, priority, status, selectedColor, side)
                     }
                 },
                 enabled = title.isNotBlank()
