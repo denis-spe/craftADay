@@ -9,5 +9,6 @@ data class DiagramProject(
     @DocumentId val id: String = "",
     val title: String = "",
     val description: String = "",
-    val layoutType: String = "TOP_DOWN"
+    val layoutType: String = "TOP_DOWN",
+    val connectorType: String = "BEZIER"
 )

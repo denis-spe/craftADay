@@ -4,6 +4,7 @@ package com.den.craftaday.backend.viewModels
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.den.craftaday.backend.dataStructure.ConnectorType
 import com.den.craftaday.backend.dataStructure.DiagramNode
 import com.den.craftaday.backend.dataStructure.DiagramProject
 import com.den.craftaday.backend.dataStructure.LayoutType
@@ -84,6 +85,16 @@ class DiagramViewModel @Inject constructor(
                             } catch (e: Exception) {
                                 Log.e("DiagramViewModel", "Invalid layout type saved: ${p.layoutType}")
                             }
+
+                            // Sync connector style
+                            try {
+                                val savedConnector = ConnectorType.valueOf(p.connectorType)
+                                if (_connectorType.value != savedConnector) {
+                                    _connectorType.value = savedConnector
+                                }
+                            } catch (e: Exception) {
+                                Log.e("DiagramViewModel", "Invalid connector type saved: ${p.connectorType}")
+                            }
                             DataState.Success(p) as DataState<DiagramProject>
                         }
                         .catch { emit(DataState.Error(it)) }
@@ -134,6 +145,17 @@ class DiagramViewModel @Inject constructor(
     // knows how to draw connectors (vertical, horizontal, or radial).
     private val _layoutType = MutableStateFlow(LayoutType.TOP_DOWN)
     val layoutType: StateFlow<LayoutType> = _layoutType.asStateFlow()
+
+    private val _connectorType = MutableStateFlow(ConnectorType.BEZIER)
+    val connectorType: StateFlow<ConnectorType> = _connectorType.asStateFlow()
+
+    fun updateConnectorType(projectId: String, type: ConnectorType) {
+        _connectorType.value = type
+        val project = (currentProject.value as? DataState.Success)?.data
+        if (project != null && project.connectorType != type.name) {
+            diagramUseCase.updateProject(project.copy(connectorType = type.name))
+        }
+    }
 
     fun addNode(
         projectId: String,
@@ -283,6 +305,7 @@ class DiagramViewModel @Inject constructor(
             LayoutType.RADIAL -> layoutRadial(projectId, currentList)
             LayoutType.GRID -> layoutGrid(projectId, currentList)
             LayoutType.MIND_MAP -> layoutMindMap(projectId, currentList)
+            LayoutType.BOTTOM_UP -> layoutBottomUp(projectId, currentList)
         }
     }
 
@@ -494,6 +517,60 @@ class DiagramViewModel @Inject constructor(
             val layoutNode = nodeMap[node.id] ?: return@forEachIndexed
             layoutNode.x = 60f + col * (cardWidthDp + gapDp)
             layoutNode.y = 80f + row * (cardHeightDp + gapDp)
+        }
+
+        applyPositions(projectId, nodeMap)
+    }
+
+    /**
+     * Bottom-to-Top Auto-Layout Algorithm:
+     * Vertical mirror of the top-down layout. Roots are at the bottom,
+     * subtrees grow upwards.
+     */
+    private fun layoutBottomUp(
+        projectId: String,
+        currentList: List<DiagramNode>
+    ) {
+        val cardWidthDp = 200f
+        val nodeGapDp = 40f
+        val levelHeightDp = 180f
+
+        val (nodeMap, rootLayoutNodes) = buildLayoutTree(currentList)
+
+        fun calculateSubtreeWidth(layoutNode: LayoutNode): Float {
+            if (layoutNode.children.isEmpty()) {
+                layoutNode.weight = cardWidthDp
+            } else {
+                var sumWidth = 0f
+                layoutNode.children.forEach { child ->
+                    sumWidth += calculateSubtreeWidth(child)
+                }
+                sumWidth += (layoutNode.children.size - 1) * nodeGapDp
+                layoutNode.weight = maxOf(cardWidthDp, sumWidth)
+            }
+            return layoutNode.weight
+        }
+        rootLayoutNodes.forEach { calculateSubtreeWidth(it) }
+
+        fun assignPositions(layoutNode: LayoutNode, startX: Float, currentY: Float) {
+            layoutNode.y = currentY
+            layoutNode.x = startX + (layoutNode.weight / 2f) - (cardWidthDp / 2f)
+
+            var childX = startX
+            layoutNode.children.forEach { child ->
+                // GROW UP: Decreasing Y coordinate
+                assignPositions(child, childX, currentY - levelHeightDp)
+                childX += child.weight + nodeGapDp
+            }
+        }
+
+        var currentRootX = 60f
+        // Start at a reasonably high bottom Y so growth doesn't hit negative space immediately
+        val bottomY = 1200f
+
+        rootLayoutNodes.forEach { root ->
+            assignPositions(root, currentRootX, bottomY)
+            currentRootX += root.weight + (nodeGapDp * 1.5f)
         }
 
         applyPositions(projectId, nodeMap)

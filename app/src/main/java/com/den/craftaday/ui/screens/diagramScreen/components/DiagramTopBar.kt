@@ -2,6 +2,7 @@
 package com.den.craftaday.ui.screens.diagramScreen.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -19,8 +20,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.den.craftaday.backend.dataStructure.ConnectorType
 import com.den.craftaday.backend.dataStructure.LayoutType
+import com.den.craftaday.helper.toTitle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,10 +34,26 @@ fun DiagramTopBar(
     projectName: String,
     currentLayoutType: LayoutType,
     scale: MutableState<Float>,
-    onRecenter: () -> Unit
+    onRecenter: () -> Unit,
+    currentConnectorType: ConnectorType
 ) {
     TopAppBar(
-        title = { Text(text = projectName) },
+        title = {
+            Column(
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = projectName,
+                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${currentLayoutType.label.toTitle} | ${currentConnectorType.label.toTitle}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }},
         actions = {
             Surface(
                 color = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),

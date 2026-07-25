@@ -33,10 +33,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.den.craftaday.backend.dataStructure.ConnectorType
 import com.den.craftaday.backend.dataStructure.DiagramNode
 import com.den.craftaday.backend.dataStructure.LayoutType
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.DiagramViewModel
+import com.den.craftaday.ui.screens.diagramScreen.components.ConnectorBottomSheet
 import com.den.craftaday.ui.screens.diagramScreen.components.DiagramNodeItem
 import com.den.craftaday.ui.screens.diagramScreen.components.EditTaskNodeDialog
 import kotlin.math.atan2
@@ -75,6 +77,12 @@ private fun computeConnectorAnchors(
         startYDp = parent.y + CARD_HEIGHT_DP - 2f,
         endXDp = node.x + CARD_WIDTH_DP / 2f,
         endYDp = node.y
+    )
+    LayoutType.BOTTOM_UP -> ConnectorAnchors(
+        startXDp = parent.x + CARD_WIDTH_DP / 2f,
+        startYDp = parent.y + 2f,
+        endXDp = node.x + CARD_WIDTH_DP / 2f,
+        endYDp = node.y + CARD_HEIGHT_DP
     )
     LayoutType.LEFT_RIGHT -> ConnectorAnchors(
         startXDp = parent.x + CARD_WIDTH_DP,
@@ -161,6 +169,7 @@ fun DiagramScreen(
 
     val nodesState by viewModel.nodes.collectAsStateWithLifecycle()
     val currentLayoutType by viewModel.layoutType.collectAsStateWithLifecycle()
+    val currentConnectorType by viewModel.connectorType.collectAsStateWithLifecycle()
     val projectState by viewModel.currentProject.collectAsStateWithLifecycle()
 
     val scale = remember { mutableFloatStateOf(1f) }
@@ -173,8 +182,9 @@ fun DiagramScreen(
     val selectedStatusFilter = remember { mutableStateOf("ALL") }
     val selectedPriorityFilter = remember { mutableStateOf("ALL") }
 
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val showLayoutSheet = remember { mutableStateOf(false) }
+    val showConnectorSheet = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val density = androidx.compose.ui.platform.LocalDensity.current
 
@@ -195,8 +205,10 @@ fun DiagramScreen(
                 projectId = projectId,
                 viewModel = viewModel,
                 showLayoutSheet = showLayoutSheet,
+                showConnectorSheet = showConnectorSheet,
                 isCreatingRoot = isCreatingRoot,
                 currentLayoutType = currentLayoutType,
+                currentConnectorType = currentConnectorType
             )
         },
 
@@ -207,6 +219,7 @@ fun DiagramScreen(
                     else -> ""
                 },
                 currentLayoutType = currentLayoutType,
+                currentConnectorType = currentConnectorType,
                 scale = scale,
                 onRecenter = {
                     if (nodesState is DataState.Success) {
@@ -331,39 +344,62 @@ fun DiagramScreen(
                                 }
                             }
 
-                            // Draw Connectors — shape depends on the active layout algorithm
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                connectorLines.forEach { (node, parent) ->
-                                    val anchors = computeConnectorAnchors(parent, node, currentLayoutType)
-                                    val startX = anchors.startXDp.dp.toPx()
-                                    val startY = anchors.startYDp.dp.toPx()
-                                    val endX = anchors.endXDp.dp.toPx()
-                                    val endY = anchors.endYDp.dp.toPx()
+                                    // Draw Connectors — shape depends on the active layout algorithm and user preference
+                                    Canvas(modifier = Modifier.fillMaxSize()) {
+                                        connectorLines.forEach { (node, parent) ->
+                                            val anchors = computeConnectorAnchors(parent, node, currentLayoutType)
+                                            val startX = anchors.startXDp.dp.toPx()
+                                            val startY = anchors.startYDp.dp.toPx()
+                                            val endX = anchors.endXDp.dp.toPx()
+                                            val endY = anchors.endYDp.dp.toPx()
 
-                                    val path = Path().apply {
-                                        moveTo(startX, startY)
-                                        when (currentLayoutType) {
-                                            LayoutType.TOP_DOWN -> {
-                                                val deltaY = endY - startY
-                                                cubicTo(
-                                                    startX, startY + deltaY * 0.5f,
-                                                    endX, endY - deltaY * 0.5f,
-                                                    endX, endY
-                                                )
+                                            val path = Path().apply {
+                                                moveTo(startX, startY)
+                                                
+                                                when (currentConnectorType) {
+                                                    ConnectorType.STRAIGHT -> {
+                                                        lineTo(endX, endY)
+                                                    }
+                                                    ConnectorType.STEP -> {
+                                                        when (currentLayoutType) {
+                                                            LayoutType.TOP_DOWN, LayoutType.BOTTOM_UP -> {
+                                                                val midY = (startY + endY) / 2f
+                                                                lineTo(startX, midY)
+                                                                lineTo(endX, midY)
+                                                                lineTo(endX, endY)
+                                                            }
+                                                            LayoutType.LEFT_RIGHT, LayoutType.MIND_MAP -> {
+                                                                val midX = (startX + endX) / 2f
+                                                                lineTo(midX, startY)
+                                                                lineTo(midX, endY)
+                                                                lineTo(endX, endY)
+                                                            }
+                                                            else -> lineTo(endX, endY)
+                                                        }
+                                                    }
+                                                    ConnectorType.BEZIER -> {
+                                                        when (currentLayoutType) {
+                                                            LayoutType.TOP_DOWN, LayoutType.BOTTOM_UP -> {
+                                                                val deltaY = endY - startY
+                                                                cubicTo(
+                                                                    startX, startY + deltaY * 0.5f,
+                                                                    endX, endY - deltaY * 0.5f,
+                                                                    endX, endY
+                                                                )
+                                                            }
+                                                            LayoutType.LEFT_RIGHT, LayoutType.MIND_MAP -> {
+                                                                val deltaX = endX - startX
+                                                                cubicTo(
+                                                                    startX + deltaX * 0.5f, startY,
+                                                                    endX - deltaX * 0.5f, endY,
+                                                                    endX, endY
+                                                                )
+                                                            }
+                                                            else -> lineTo(endX, endY)
+                                                        }
+                                                    }
+                                                }
                                             }
-                                            LayoutType.LEFT_RIGHT, LayoutType.MIND_MAP -> {
-                                                val deltaX = endX - startX
-                                                cubicTo(
-                                                    startX + deltaX * 0.5f, startY,
-                                                    endX - deltaX * 0.5f, endY,
-                                                    endX, endY
-                                                )
-                                            }
-                                            LayoutType.RADIAL, LayoutType.GRID -> {
-                                                lineTo(endX, endY)
-                                            }
-                                        }
-                                    }
 
                                     val lineColor = try {
                                         Color(node.color.toColorInt())
@@ -529,6 +565,18 @@ fun DiagramScreen(
                     }
                 }
             }
+        )
+    }
+
+    // Modal Bottom Sheet for Connector Selection
+    if (showConnectorSheet.value) {
+        ConnectorBottomSheet(
+            projectId = projectId,
+            viewModel = viewModel,
+            showConnectorSheet = showConnectorSheet,
+            currentConnectorType = currentConnectorType,
+            sheetState = sheetState,
+            scope = scope
         )
     }
 }

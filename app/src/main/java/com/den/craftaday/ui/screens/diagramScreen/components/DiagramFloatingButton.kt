@@ -7,7 +7,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.HorizontalDistribute
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.LinearScale
+import androidx.compose.material.icons.filled.Polyline
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -17,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import com.den.craftaday.backend.dataStructure.ConnectorType
 import com.den.craftaday.backend.dataStructure.LayoutType
 import com.den.craftaday.backend.viewModels.DiagramViewModel
 
@@ -25,8 +34,10 @@ fun DiagramFloatingButton(
     projectId: String,
     viewModel: DiagramViewModel,
     showLayoutSheet: MutableState<Boolean>,
+    showConnectorSheet: MutableState<Boolean>,
     isCreatingRoot: MutableState<Boolean>,
     currentLayoutType: LayoutType,
+    currentConnectorType: ConnectorType,
 ){
     Surface(
         color = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
@@ -50,7 +61,19 @@ fun DiagramFloatingButton(
                 onClick = { showLayoutSheet.value = true },
                 shape = CircleShape,
             ) {
-                Icon(Icons.Default.AccountTree, contentDescription = "Auto Layout")
+                Icon(Icons.Default.Layers, contentDescription = "Layout")
+            }
+
+            IconButton(
+                onClick = { showConnectorSheet.value = true },
+                shape = CircleShape,
+            ) {
+                val connectorIcon = when (currentConnectorType) {
+                    ConnectorType.BEZIER -> Icons.Default.Timeline
+                    ConnectorType.STRAIGHT -> Icons.Default.LinearScale
+                    ConnectorType.STEP -> Icons.Default.Polyline
+                }
+                Icon(connectorIcon, contentDescription = "Connector Style")
             }
 
             FilledIconButton(

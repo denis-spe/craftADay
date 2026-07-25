@@ -7,13 +7,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.ForkLeft
+import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Schema
+import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -60,63 +65,74 @@ fun LayoutBottomSheet(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            LayoutType.entries.forEach { type ->
-                val isSelected = type == currentLayoutType
-                Surface(
-                    onClick = {
-                        scope.launch {
-                            viewModel.autoLayoutTree(
-                                projectId,
-                                type
-                            )
-                            onLayoutSelected()
-                            sheetState.hide()
-                        }.invokeOnCompletion {
-                            if (!sheetState.isVisible) {
-                                showLayoutSheet.value = false
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                text = type.label,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        leadingContent = {
-                            Icon(
-                                imageVector = when (type) {
-                                    LayoutType.TOP_DOWN -> Icons.Default.AccountTree
-                                    LayoutType.LEFT_RIGHT -> Icons.Default.AccountTree // Should maybe use different icons
-                                    LayoutType.RADIAL -> Icons.Default.FilterList
-                                    LayoutType.GRID -> Icons.Default.Delete
-                                    LayoutType.MIND_MAP -> Icons.Default.Schema
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+
+                LayoutType.entries.forEach { type ->
+                    val isSelected = type == currentLayoutType
+
+                    item(
+                        key = type.label
+                    ) {
+                        Surface(
+                            onClick = {
+                                scope.launch {
+                                    viewModel.autoLayoutTree(
+                                        projectId,
+                                        type
+                                    )
+                                    onLayoutSelected()
+                                    sheetState.hide()
+                                }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) {
+                                        showLayoutSheet.value = false
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        text = type.label,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
                                 },
-                                contentDescription = null,
-                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        trailingContent = {
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
-                                    tint = MaterialTheme.colorScheme.primary
+                                leadingContent = {
+                                    Icon(
+                                        imageVector = when (type) {
+                                            LayoutType.TOP_DOWN -> Icons.Default.VerticalAlignBottom
+                                            LayoutType.LEFT_RIGHT -> Icons.Default.ForkLeft // Should maybe use different icons
+                                            LayoutType.RADIAL -> Icons.Default.AccountTree
+                                            LayoutType.GRID -> Icons.Default.GridOn
+                                            LayoutType.MIND_MAP -> Icons.Default.Schema
+                                            LayoutType.BOTTOM_UP -> Icons.Default.VerticalAlignTop
+                                        },
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                trailingContent = {
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                },
+                                colors = androidx.compose.material3.ListItemDefaults.colors(
+                                    containerColor = Color.Transparent
                                 )
-                            }
-                        },
-                        colors = androidx.compose.material3.ListItemDefaults.colors(
-                            containerColor = Color.Transparent
-                        )
-                    )
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
