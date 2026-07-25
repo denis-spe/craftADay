@@ -2,54 +2,21 @@
 package com.den.craftaday.ui.screens.diagramScreen
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AccountTree
-import androidx.compose.material.icons.filled.CenterFocusStrong
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.ZoomIn
-import androidx.compose.material.icons.filled.ZoomOut
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,9 +30,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.den.craftaday.backend.dataStructure.DiagramNode
 import com.den.craftaday.backend.dataStructure.LayoutType
@@ -73,12 +39,13 @@ import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.DiagramViewModel
 import com.den.craftaday.ui.screens.diagramScreen.components.DiagramNodeItem
 import com.den.craftaday.ui.screens.diagramScreen.components.EditTaskNodeDialog
-import kotlinx.coroutines.launch
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.core.graphics.toColorInt
 import com.den.craftaday.ui.screens.diagramScreen.components.DiagramFloatingButton
+import com.den.craftaday.ui.screens.diagramScreen.components.DiagramTopBar
+import com.den.craftaday.ui.screens.diagramScreen.components.LayoutBottomSheet
 
 /** dp-space anchor points for the connector between a parent and a child node. */
 private data class ConnectorAnchors(
@@ -123,19 +90,64 @@ private fun computeConnectorAnchors(
     )
 }
 
+
+private fun recenter(
+    nodes: List<DiagramNode>,
+    scale: MutableFloatState,
+    offset: MutableState<Offset>,
+    screenWidthPx: MutableFloatState,
+    screenHeightPx: MutableFloatState,
+    density: Density
+) {
+    val minX = nodes.minOf { it.x }
+    val minY = nodes.minOf { it.y }
+    val maxX = nodes.maxOf { it.x }
+    val maxY = nodes.maxOf { it.y }
+
+    val diagramWidthDp = (maxX - minX) + CARD_WIDTH_DP
+    val diagramHeightDp = (maxY - minY) + CARD_HEIGHT_DP
+
+    val diagramCenterXEachPx = (minX + diagramWidthDp / 2f) * density.density
+    val diagramCenterYEachPx = (minY + diagramHeightDp / 2f) * density.density
+
+
+    val paddingPx = 100f
+    val availableWidthPx = screenWidthPx.floatValue - paddingPx
+    val availableHeightPx = screenHeightPx.floatValue - paddingPx
+
+    val diagramWidthPx = diagramWidthDp * density.density
+    val diagramHeightPx = diagramHeightDp * density.density
+
+    val scaleX = availableWidthPx / diagramWidthPx
+    val scaleY = availableHeightPx / diagramHeightPx
+    val finalScale = minOf(scaleX, scaleY).coerceIn(0.3f, 1f)
+
+    scale.floatValue = finalScale
+    offset.value = Offset(
+        (screenWidthPx.floatValue / 2f - diagramCenterXEachPx) * finalScale,
+        (screenHeightPx.floatValue / 2f - diagramCenterYEachPx) * finalScale
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiagramScreen(
+    projectId: String,
     viewModel: DiagramViewModel
 ) {
+    LaunchedEffect(projectId) {
+        viewModel.setProjectId(projectId)
+    }
+
     val nodesState by viewModel.nodes.collectAsStateWithLifecycle()
     val currentLayoutType by viewModel.layoutType.collectAsStateWithLifecycle()
+    val projectState by viewModel.currentProject.collectAsStateWithLifecycle()
 
     val scale = remember { mutableFloatStateOf(1f) }
     val offset = remember { mutableStateOf(Offset.Zero) }
 
     var editingNode by remember { mutableStateOf<DiagramNode?>(null) }
-    var isCreatingRoot = remember { mutableStateOf(false) }
+    val isCreatingRoot = remember { mutableStateOf(false) }
     var creatingChildForParentId by remember { mutableStateOf<String?>(null) }
 
     val selectedStatusFilter = remember { mutableStateOf("ALL") }
@@ -144,38 +156,85 @@ fun DiagramScreen(
     val sheetState = rememberModalBottomSheetState()
     val showLayoutSheet = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val density = androidx.compose.ui.platform.LocalDensity.current
 
-    val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
+    val screenWidthPx = remember { mutableFloatStateOf(0f) }
+    val screenHeightPx = remember { mutableFloatStateOf(0f) }
+
+    var hasInitialized by remember { mutableStateOf(false) }
+
+    val transformState = rememberTransformableState { centroid, zoomChange, panChange, _ ->
         scale.floatValue = (scale.floatValue * zoomChange).coerceIn(0.2f, 3f)
-        offset.value += offsetChange
+        // Natural transformation: Zoom around the centroid point
+        offset.value = (offset.value - centroid) * zoomChange + centroid + panChange
     }
 
     Scaffold(
         floatingActionButton = {
             DiagramFloatingButton(
+                projectId = projectId,
                 viewModel = viewModel,
                 showLayoutSheet = showLayoutSheet,
                 isCreatingRoot = isCreatingRoot,
-                currentLayoutType = currentLayoutType
+                currentLayoutType = currentLayoutType,
             )
         },
 
         topBar = {
             DiagramTopBar(
-                projectName = "Project Name",
-                viewModel = viewModel,
+                projectName = when (val result = projectState) {
+                    is DataState.Success -> result.data.title
+                    else -> ""
+                },
                 currentLayoutType = currentLayoutType,
                 scale = scale,
-                offset = offset
+                onRecenter = {
+                    if (nodesState is DataState.Success) {
+                        val nodes = (nodesState as DataState.Success).data
+                        if (nodes.isNotEmpty()) {
+                            recenter(
+                                nodes = nodes,
+                                scale = scale,
+                                offset = offset,
+                                screenWidthPx = screenWidthPx,
+                                screenHeightPx = screenHeightPx,
+                                density = density
+                            )
+                        }
+                    }
+                }
             )
         }
 
     ) { innerPadding ->
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            screenWidthPx.floatValue = with(density) { maxWidth.toPx() }
+            screenHeightPx.floatValue = with(density) { maxHeight.toPx() }
+
+            // Auto-center and zoom out on initial load
+            LaunchedEffect(nodesState, currentLayoutType) {
+                if (!hasInitialized && nodesState is DataState.Success) {
+                    val nodes = (nodesState as DataState.Success).data
+                    if (nodes.isNotEmpty()) {
+                        recenter(
+                            nodes = nodes,
+                            scale = scale,
+                            offset = offset,
+                            screenWidthPx = screenWidthPx,
+                            screenHeightPx = screenHeightPx,
+                            density = density
+                        )
+                        hasInitialized = true
+                    } else {
+                        hasInitialized = true
+                    }
+                }
+            }
+
             // Main Canvas Area with Pan/Zoom Gestures
             Box(
                 modifier = Modifier
@@ -317,9 +376,13 @@ fun DiagramScreen(
                                 DiagramNodeItem(
                                     node = node,
                                     isSelected = editingNode?.id == node.id,
-                                    onMove = { x, y -> viewModel.updateNodePosition(node, x, y) },
+                                    onMove = { x, y -> viewModel.updateNodePosition(
+                                        projectId, node, x, y) },
                                     onClick = { editingNode = node },
-                                    onToggleStatus = { viewModel.toggleTaskStatus(node) },
+                                    onToggleStatus = { viewModel.toggleTaskStatus(
+                                        projectId,
+                                        node
+                                    ) },
                                     onAddChild = { creatingChildForParentId = node.id }
                                 )
                             }
@@ -338,6 +401,7 @@ fun DiagramScreen(
             onDismiss = { isCreatingRoot.value = false },
             onSave = { title, description, priority, status, color ->
                 viewModel.addNode(
+                    projectId = projectId,
                     title = title,
                     description = description,
                     priority = priority,
@@ -360,6 +424,7 @@ fun DiagramScreen(
             onDismiss = { creatingChildForParentId = null },
             onSave = { title, description, priority, status, color ->
                 viewModel.addNode(
+                    projectId = projectId,
                     title = title,
                     description = description,
                     priority = priority,
@@ -379,6 +444,7 @@ fun DiagramScreen(
             onDismiss = { editingNode = null },
             onSave = { title, description, priority, status, color ->
                 viewModel.updateNodeDetails(
+                    projectId = projectId,
                     editingNode!!.copy(
                         title = title,
                         description = description,
@@ -390,7 +456,10 @@ fun DiagramScreen(
                 editingNode = null
             },
             onDelete = {
-                viewModel.deleteNodeAndSubtree(editingNode!!.id)
+                viewModel.deleteNodeAndSubtree(
+                    projectId = projectId,
+                    nodeId = editingNode!!.id
+                )
                 editingNode = null
             }
         )
@@ -398,103 +467,13 @@ fun DiagramScreen(
 
     // Modal Bottom Sheet for Layout Selection
     if (showLayoutSheet.value) {
-        ModalBottomSheet(
-            onDismissRequest = { showLayoutSheet.value = false },
-            sheetState = sheetState
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Select Layout Strategy",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                
-                LayoutType.entries.forEach { type ->
-                    val isSelected = type == currentLayoutType
-                    Surface(
-                        onClick = {
-                            scope.launch {
-                                viewModel.autoLayoutTree(type)
-                                sheetState.hide()
-                            }.invokeOnCompletion {
-                                if (!sheetState.isVisible) {
-                                    showLayoutSheet.value = false
-                                }
-                            }
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        ListItem(
-                            headlineContent = { 
-                                Text(
-                                    text = type.label,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                ) 
-                            },
-                            leadingContent = {
-                                Icon(
-                                    imageVector = when (type) {
-                                        LayoutType.TOP_DOWN -> Icons.Default.AccountTree
-                                        LayoutType.LEFT_RIGHT -> Icons.Default.AccountTree // Should maybe use different icons
-                                        LayoutType.RADIAL -> Icons.Default.FilterList
-                                        LayoutType.GRID -> Icons.Default.Delete
-                                    },
-                                    contentDescription = null,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            trailingContent = {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            },
-                            colors = androidx.compose.material3.ListItemDefaults.colors(
-                                containerColor = Color.Transparent
-                            )
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
+        LayoutBottomSheet(
+            projectId,
+            viewModel = viewModel,
+            showLayoutSheet = showLayoutSheet,
+            currentLayoutType = currentLayoutType,
+            sheetState = sheetState,
+            scope = scope
+        )
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DiagramTopBar(
-    projectName: String,
-    viewModel: DiagramViewModel,
-    currentLayoutType: LayoutType,
-    scale: MutableState<Float>,
-    offset: MutableState<Offset>
-) {
-    TopAppBar(
-        title = { Text(text = projectName) },
-        actions = {
-            IconButton(onClick = { scale.value = (scale.value + 0.2f).coerceAtMost(3f) }) {
-                Icon(Icons.Default.ZoomIn, contentDescription = "Zoom In")
-            }
-            IconButton(onClick = { scale.value = (scale.value - 0.2f).coerceAtLeast(0.3f) }) {
-                Icon(Icons.Default.ZoomOut, contentDescription = "Zoom Out")
-            }
-            IconButton(onClick = {
-                scale.value = 1f
-                offset.value = Offset.Zero
-            }) {
-                Icon(Icons.Default.CenterFocusStrong, contentDescription = "Reset View")
-            }
-        }
-    )
 }

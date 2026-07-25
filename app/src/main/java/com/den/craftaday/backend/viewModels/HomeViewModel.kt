@@ -3,10 +3,12 @@ package com.den.craftaday.backend.viewModels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.den.craftaday.backend.dataStructure.DiagramProject
 import com.den.craftaday.backend.dataStructure.Task
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.useCase.AuthorizationUseCase
+import com.den.craftaday.backend.useCase.DiagramUseCase
 import com.den.craftaday.backend.useCase.TaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,6 +25,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     val authorizationUseCase: AuthorizationUseCase,
     val taskUseCase: TaskUseCase,
+    val diagramUseCase: DiagramUseCase
 ) : ViewModel() {
     companion object {
         const val SUBSCRIBE_TIMEOUT = 5000L
@@ -46,6 +49,32 @@ class HomeViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT),
             initialValue = DataState.Loading // 2. UI starts in a Loading state immediately
         )
+
+    val fetchAllProjects = authorizationUseCase.userState
+        .flatMapLatest { authState ->
+            if (authState is AuthState.Authenticated) {
+                diagramUseCase.getAllProjects().map<List<DiagramProject>, DataState<List<DiagramProject>>> { projects ->
+                    DataState.Success(projects)
+                }
+                    .catch { exception ->
+                        emit(DataState.Error(exception))
+                    }
+            } else {
+                emptyFlow()
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT),
+            initialValue = DataState.Loading
+        )
+
+    fun addProject(title: String, description: String) =
+        diagramUseCase.addProject(DiagramProject(title = title, description = description))
+
+    fun deleteProject(digramProject: DiagramProject) = diagramUseCase.deleteProject(digramProject)
+
+    fun updateProject(digramProject: DiagramProject) = diagramUseCase.updateProject(digramProject)
 
     fun addTaskData(task: Task) = taskUseCase.addTask(task)
 

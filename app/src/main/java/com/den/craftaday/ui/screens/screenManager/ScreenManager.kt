@@ -128,6 +128,7 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(
     entry<DiagramRouter> {
         val diagramViewModel: DiagramViewModel = hiltViewModel()
         DiagramScreen(
+            projectId = it.projectId,
             viewModel = diagramViewModel
         )
     }
