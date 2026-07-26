@@ -7,6 +7,7 @@ import com.den.craftaday.backend.dataStructure.Task
 import com.den.craftaday.backend.blueprints.DataStorage
 import com.den.craftaday.backend.dataStructure.DiagramProject
 import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.dataObjects
 import kotlinx.coroutines.flow.map
@@ -129,17 +130,25 @@ class DataStorageRepo(
             Log.e(TAG, "FAILED to add node: userId is empty. Node: ${node.title}")
             return
         }
-        docRef.document(userId)
+        
+        val collection = docRef.document(userId)
             .collection(PROJECTS_COLLECTION)
             .document(diagramProjectId)
             .collection(NODES_COLLECTION)
-            .add(node)
-            .addOnSuccessListener { ref ->
-                Log.w(TAG, "SUCCESS: Added node '${node.title}' (ID: ${ref.id}) for user: $userId in project: $diagramProjectId")
-            }
-            .addOnFailureListener {
-                Log.e(TAG, "FAILURE: Error adding node '${node.title}' for user: $userId in project: $diagramProjectId. Error: ${it.message}", it)
-            }
+            
+        // If node has an ID, use it (pre-generated), otherwise let Firestore add it
+        val task = if (node.id.isEmpty()) {
+            collection.add(node)
+        } else {
+            collection.document(node.id).set(node)
+        }
+
+        task.addOnSuccessListener {
+            Log.w(TAG, "SUCCESS: Added/Set node '${node.title}' for user: $userId in project: $diagramProjectId")
+        }
+        .addOnFailureListener {
+            Log.e(TAG, "FAILURE: Error adding node '${node.title}' for user: $userId in project: $diagramProjectId. Error: ${it.message}", it)
+        }
     }
 
     override fun deleteDiagramNode(
@@ -185,6 +194,17 @@ class DataStorageRepo(
             }
             .addOnFailureListener {
                 Log.e(TAG, "FAILURE: Error updating node ${node.id} for user: $userId in project: $diagramProjectId. Error: ${it.message}", it)
+            }
+    }
+
+    override fun incrementUserStats(userId: String, isSuccess: Boolean) {
+        if (userId.isEmpty()) return
+        val field = if (isSuccess) "successCount" else "failureCount"
+        docRef.document(userId)
+            .update(field, FieldValue.increment(1))
+            .addOnFailureListener {
+                // If the document doesn't exist, create it
+                docRef.document(userId).set(mapOf(field to 1), com.google.firebase.firestore.SetOptions.merge())
             }
     }
 }

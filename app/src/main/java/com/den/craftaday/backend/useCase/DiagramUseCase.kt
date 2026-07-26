@@ -43,4 +43,8 @@ class DiagramUseCase @Inject constructor(
     fun deleteDiagramNode(projectId: String, nodeId: String) {
         dataStorage.deleteDiagramNode(userId, diagramProjectId = projectId, nodeId = nodeId)
     }
+
+    fun incrementUserStats(isSuccess: Boolean) {
+        dataStorage.incrementUserStats(userId, isSuccess)
+    }
 }

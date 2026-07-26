@@ -22,9 +22,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -74,6 +77,7 @@ fun DiagramNodeItem(
 
     val isCompleted = node.status == "COMPLETED"
     val isInProgress = node.status == "IN_PROGRESS"
+    val isFailed = node.status == "FAILED"
 
     val priorityColor = remember(node.priority) {
         when (node.priority) {
@@ -153,6 +157,7 @@ fun DiagramNodeItem(
                         val icon = when {
                             isCompleted -> Icons.Default.CheckCircle
                             isInProgress -> Icons.Default.Schedule
+                            isFailed -> Icons.Default.Cancel
                             else -> Icons.Default.RadioButtonUnchecked
                         }
                         
@@ -163,6 +168,7 @@ fun DiagramNodeItem(
                             when {
                                 isCompleted -> Color(0xFF4CAF50)
                                 isInProgress -> Color(0xFFFF9800)
+                                isFailed -> Color(0xFFF44336)
                                 else -> Color.Gray
                             }
                         }
@@ -178,6 +184,7 @@ fun DiagramNodeItem(
                             text = when {
                                 isCompleted -> "DONE"
                                 isInProgress -> "IN PROG"
+                                isFailed -> "FAILED"
                                 else -> "TODO"
                             },
                             fontSize = 10.sp,

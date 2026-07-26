@@ -2,6 +2,7 @@
 package com.den.craftaday.backend.dataStructure
 
 import androidx.compose.runtime.Stable
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 
@@ -13,8 +14,11 @@ data class DiagramNode(
     val description: String = "",
     val status: String = "TODO", // "TODO", "IN_PROGRESS", "COMPLETED"
     val priority: String = "MEDIUM", // "LOW", "MEDIUM", "HIGH", "URGENT"
-    val dueDate: String = "",
+    val remainder: Timestamp = Timestamp.now(),
+    val alarmRepeat: String = "NONE", // "NONE", "DAILY", "WEEKLY", "MONTHLY"
     val progress: Float = 0f,
+    val successCount: Int = 0,
+    val failureCount: Int = 0,
     val x: Float = 0f,
     val y: Float = 0f,
     val color: String = "#3F51B5",

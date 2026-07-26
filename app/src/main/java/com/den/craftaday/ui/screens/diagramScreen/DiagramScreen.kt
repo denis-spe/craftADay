@@ -1,6 +1,17 @@
 // Glory be to the name of the LORD of host, The GOD of Israel.
 package com.den.craftaday.ui.screens.diagramScreen
 
+import android.Manifest
+import android.app.AlarmManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -172,6 +183,47 @@ fun DiagramScreen(
     projectId: String,
     viewModel: DiagramViewModel
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (!isGranted) {
+                Log.e("DiagramScreen", "Notification permission denied")
+            }
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        // Request notification permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        // Check for Exact Alarm permission on Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if (!alarmManager.canScheduleExactAlarms()) {
+                Log.d("DiagramScreen", "Exact alarm permission missing. Requesting user intervention.")
+                Toast.makeText(
+                    context, 
+                    "Please enable 'Alarms & Reminders' for CraftADay to ensure precise task deadlines.", 
+                    Toast.LENGTH_LONG
+                ).show()
+                try {
+                    val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    Log.e("DiagramScreen", "Failed to open exact alarm settings", e)
+                }
+            } else {
+                Log.d("DiagramScreen", "Exact alarm permission is already granted.")
+            }
+        }
+    }
+
     LaunchedEffect(projectId) {
         viewModel.setProjectId(projectId)
     }
@@ -549,7 +601,7 @@ fun DiagramScreen(
             node = null,
             isCreatingRoot = true,
             onDismiss = { isCreatingRoot.value = false },
-            onSave = { title, description, priority, status, color, side, isColorFilled ->
+            onSave = { title, description, priority, status, color, side, isColorFilled, remainder, alarmRepeat ->
                 viewModel.addNode(
                     projectId = projectId,
                     title = title,
@@ -559,7 +611,9 @@ fun DiagramScreen(
                     color = color,
                     side = side,
                     parentId = null,
-                    isColorFilled = isColorFilled
+                    isColorFilled = isColorFilled,
+                    remainder = remainder,
+                    alarmRepeat = alarmRepeat
                 )
                 isCreatingRoot.value = false
             }
@@ -574,7 +628,7 @@ fun DiagramScreen(
             isCreatingChild = true,
             initialColor = parentNode?.color,
             onDismiss = { creatingChildForParentId = null },
-            onSave = { title, description, priority, status, color, side, isColorFilled ->
+            onSave = { title, description, priority, status, color, side, isColorFilled, remainder, alarmRepeat ->
                 viewModel.addNode(
                     projectId = projectId,
                     title = title,
@@ -584,7 +638,9 @@ fun DiagramScreen(
                     color = color,
                     side = side,
                     parentId = creatingChildForParentId,
-                    isColorFilled = isColorFilled
+                    isColorFilled = isColorFilled,
+                    remainder = remainder,
+                    alarmRepeat = alarmRepeat
                 )
                 creatingChildForParentId = null
             }
@@ -596,7 +652,7 @@ fun DiagramScreen(
         EditTaskNodeDialog(
             node = editingNode,
             onDismiss = { editingNode = null },
-            onSave = { title, description, priority, status, color, side, isColorFilled ->
+            onSave = { title, description, priority, status, color, side, isColorFilled, remainder, alarmRepeat ->
                 viewModel.updateNodeDetails(
                     projectId = projectId,
                     editingNode!!.copy(
@@ -606,7 +662,9 @@ fun DiagramScreen(
                         status = status,
                         color = color,
                         side = side,
-                        isColorFilled = isColorFilled
+                        isColorFilled = isColorFilled,
+                        remainder = remainder,
+                        alarmRepeat = alarmRepeat
                     )
                 )
                 editingNode = null

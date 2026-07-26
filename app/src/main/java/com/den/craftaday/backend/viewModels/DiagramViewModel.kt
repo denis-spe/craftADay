@@ -4,10 +4,14 @@ package com.den.craftaday.backend.viewModels
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.den.craftaday.backend.AlarmManager.DiagramAlarmManager
 import com.den.craftaday.backend.dataStructure.ConnectorType
+import java.util.Calendar
+import java.util.UUID
 import com.den.craftaday.backend.dataStructure.DiagramNode
 import com.den.craftaday.backend.dataStructure.DiagramProject
 import com.den.craftaday.backend.dataStructure.LayoutType
+import com.google.firebase.Timestamp
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.useCase.AuthorizationUseCase
@@ -60,7 +64,8 @@ private fun buildLayoutTree(currentList: List<DiagramNode>): Pair<Map<String, La
 @HiltViewModel
 class DiagramViewModel @Inject constructor(
     private val diagramUseCase: DiagramUseCase,
-    val authorizationUseCase: AuthorizationUseCase
+    val authorizationUseCase: AuthorizationUseCase,
+    private val alarmManager: DiagramAlarmManager
 ) : ViewModel() {
 
     private val _projectId = MutableStateFlow<String?>(null)
@@ -172,7 +177,9 @@ class DiagramViewModel @Inject constructor(
         parentId: String? = null,
         x: Float = 0f,
         y: Float = 0f,
-        isColorFilled: Boolean
+        isColorFilled: Boolean,
+        remainder: Timestamp,
+        alarmRepeat: String = "NONE"
     ) {
         val currentList = (nodes.value as? DataState.Success<List<DiagramNode>>)?.data ?: emptyList()
 
@@ -205,7 +212,10 @@ class DiagramViewModel @Inject constructor(
             }
         }
 
+        val generatedId = if (parentId == null) UUID.randomUUID().toString() else UUID.randomUUID().toString()
+
         val newNode = DiagramNode(
+            id = generatedId,
             title = title,
             description = description,
             priority = priority,
@@ -216,19 +226,39 @@ class DiagramViewModel @Inject constructor(
             color = color,
             side = side,
             nodeType = if (parentId == null) "ROOT" else "TASK",
-            isColorFilled = isColorFilled
+            isColorFilled = isColorFilled,
+            remainder = remainder,
+            alarmRepeat = alarmRepeat
         )
-        diagramUseCase.addDiagramNode( projectId, node =  newNode)
+        diagramUseCase.addDiagramNode(projectId, node = newNode)
+
+        // Schedule alarm for the new node
+        alarmManager.scheduleAlarm(
+            projectId = projectId,
+            nodeId = newNode.id,
+            nodeTitle = newNode.title,
+            timestamp = newNode.remainder
+        )
     }
 
     fun updateNodeDetails(projectId: String, node: DiagramNode) {
         diagramUseCase.updateDiagramNode(projectId = projectId, node = node)
+        
+        // Reschedule alarm (cancels old one automatically by using same request code)
+        alarmManager.scheduleAlarm(
+            projectId = projectId,
+            nodeId = node.id,
+            nodeTitle = node.title,
+            timestamp = node.remainder
+        )
     }
 
     fun toggleTaskStatus(projectId: String, node: DiagramNode) {
         val nextStatus = when (node.status) {
             "TODO" -> "IN_PROGRESS"
             "IN_PROGRESS" -> "COMPLETED"
+            "COMPLETED" -> "FAILED"
+            "FAILED" -> "TODO"
             else -> "TODO"
         }
         val updatedProgress = when (nextStatus) {
@@ -236,7 +266,54 @@ class DiagramViewModel @Inject constructor(
             "IN_PROGRESS" -> 0.5f
             else -> 0f
         }
-        diagramUseCase.updateDiagramNode(projectId = projectId, node = node.copy(status = nextStatus, progress = updatedProgress))
+        
+        var updatedNode = node.copy(status = nextStatus, progress = updatedProgress)
+
+        // If completed, increment stats and handle recurring alarms
+        if (nextStatus == "COMPLETED") {
+            diagramUseCase.incrementUserStats(isSuccess = true)
+            
+            if (node.alarmRepeat != "NONE") {
+                val nextTimestamp = calculateNextTimestamp(node.remainder, node.alarmRepeat)
+                // Reset recurring task for the next cycle
+                updatedNode = updatedNode.copy(
+                    status = "TODO",
+                    progress = 0f,
+                    remainder = nextTimestamp
+                )
+                // Schedule next alarm
+                alarmManager.scheduleAlarm(
+                    projectId = projectId,
+                    nodeId = node.id,
+                    nodeTitle = node.title,
+                    timestamp = nextTimestamp
+                )
+            } else {
+                alarmManager.cancelAlarm(node.id)
+            }
+        }
+        
+        diagramUseCase.updateDiagramNode(projectId = projectId, node = updatedNode)
+    }
+
+    private fun calculateNextTimestamp(current: Timestamp, repeat: String): Timestamp {
+        val calendar = Calendar.getInstance().apply {
+            time = current.toDate()
+        }
+        when (repeat) {
+            "DAILY" -> calendar.add(Calendar.DAY_OF_YEAR, 1)
+            "WEEKLY" -> calendar.add(Calendar.WEEK_OF_YEAR, 1)
+            "MONTHLY" -> calendar.add(Calendar.MONTH, 1)
+        }
+        // Ensure the next time is in the future
+        while (calendar.timeInMillis <= System.currentTimeMillis()) {
+            when (repeat) {
+                "DAILY" -> calendar.add(Calendar.DAY_OF_YEAR, 1)
+                "WEEKLY" -> calendar.add(Calendar.WEEK_OF_YEAR, 1)
+                "MONTHLY" -> calendar.add(Calendar.MONTH, 1)
+            }
+        }
+        return Timestamp(calendar.time)
     }
 
     fun updateNodePosition(projectId: String, node: DiagramNode, x: Float, y: Float) {
@@ -280,6 +357,7 @@ class DiagramViewModel @Inject constructor(
         collectSubtree(nodeId)
         toDelete.forEach { id ->
             diagramUseCase.deleteDiagramNode(projectId = projectId, nodeId = id)
+            alarmManager.cancelAlarm(id)
         }
     }
 

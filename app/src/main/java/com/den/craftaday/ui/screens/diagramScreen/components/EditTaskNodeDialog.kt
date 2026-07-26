@@ -19,6 +19,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -40,11 +42,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.den.craftaday.backend.dataStructure.DiagramNode
+import com.google.firebase.Timestamp
 import androidx.core.graphics.toColorInt
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 
 val PRESET_COLORS = listOf(
     "#D94753", // SVG Red
@@ -60,6 +69,7 @@ val PRESET_COLORS = listOf(
 val PRIORITIES = listOf("LOW", "MEDIUM", "HIGH", "URGENT")
 val STATUSES = listOf("TODO", "IN_PROGRESS", "COMPLETED")
 val SIDES = listOf("LEFT", "RIGHT")
+val REPEAT_OPTIONS = listOf("NONE", "DAILY", "WEEKLY", "MONTHLY")
 
 @Composable
 fun EditTaskNodeDialog(
@@ -68,18 +78,54 @@ fun EditTaskNodeDialog(
     isCreatingChild: Boolean = false,
     initialColor: String? = null,
     onDismiss: () -> Unit,
-    onSave: (title: String, description: String, priority: String, status: String, color: String, side: String, isColorFilled: Boolean) -> Unit,
+    onSave: (title: String, description: String, priority: String, status: String, color: String, side: String, isColorFilled: Boolean, remainder: Timestamp, alarmRepeat: String) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
     var title by remember(node) { mutableStateOf(node?.title ?: "") }
     var description by remember(node) { mutableStateOf(node?.description ?: "") }
     var priority by remember(node) { mutableStateOf(node?.priority ?: "MEDIUM") }
     var status by remember(node) { mutableStateOf(node?.status ?: "TODO") }
     var side by remember(node) { mutableStateOf(node?.side ?: "RIGHT") }
+    var alarmRepeat by remember(node) { mutableStateOf(node?.alarmRepeat ?: "NONE") }
     var isColorFilled by remember(node) { mutableStateOf(node?.isColorFilled ?: false) }
+    var remainder by remember(node) { mutableStateOf(node?.remainder ?: Timestamp.now()) }
     var selectedColor by remember(node) { 
         mutableStateOf(node?.color ?: initialColor ?: "#3F51B5") 
     }
+
+    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
+
+    fun showDateTimePicker() {
+        val currentCalendar = Calendar.getInstance().apply {
+            time = remainder.toDate()
+        }
+        
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                currentCalendar.set(Calendar.YEAR, year)
+                currentCalendar.set(Calendar.MONTH, month)
+                currentCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                
+                TimePickerDialog(
+                    context,
+                    { _, hourOfDay, minute ->
+                        currentCalendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                        currentCalendar.set(Calendar.MINUTE, minute)
+                        remainder = Timestamp(currentCalendar.time)
+                    },
+                    currentCalendar.get(Calendar.HOUR_OF_DAY),
+                    currentCalendar.get(Calendar.MINUTE),
+                    false
+                ).show()
+            },
+            currentCalendar.get(Calendar.YEAR),
+            currentCalendar.get(Calendar.MONTH),
+            currentCalendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
 
     val dialogTitle = when {
         isCreatingRoot -> "Add Root DiagramProject Node"
@@ -172,6 +218,52 @@ fun EditTaskNodeDialog(
                     }
                 }
 
+                // Remainder / Deadline Selection
+                Column {
+                    Text("Reminder", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            .clickable { showDateTimePicker() }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = dateFormatter.format(remainder.toDate()),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                // Alarm Repeat Selection
+                Column {
+                    Text("Repeat", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        REPEAT_OPTIONS.forEach { opt ->
+                            FilterChip(
+                                selected = alarmRepeat == opt,
+                                onClick = { alarmRepeat = opt },
+                                label = { Text(opt, style = MaterialTheme.typography.labelSmall) }
+                            )
+                        }
+                    }
+                }
+
+
                 // Color Selection
                 Column {
                     Text("Color Tag", style = MaterialTheme.typography.labelMedium)
@@ -244,7 +336,9 @@ fun EditTaskNodeDialog(
                             status,
                             selectedColor,
                             side,
-                            isColorFilled)
+                            isColorFilled,
+                            remainder,
+                            alarmRepeat)
                     }
                 },
                 enabled = title.isNotBlank()

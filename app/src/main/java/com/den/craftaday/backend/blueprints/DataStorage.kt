@@ -78,4 +78,5 @@ interface DataStorage {
     fun deleteProject(userId: String, project: DiagramProject)
     fun updateProject(userId: String, project: DiagramProject)
     fun getProject(userId: String, projectId: String): Flow<DiagramProject?>
+    fun incrementUserStats(userId: String, isSuccess: Boolean)
 }
