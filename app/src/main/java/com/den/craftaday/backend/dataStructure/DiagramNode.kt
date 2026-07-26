@@ -3,6 +3,7 @@ package com.den.craftaday.backend.dataStructure
 
 import androidx.compose.runtime.Stable
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.PropertyName
 
 @Stable
 data class DiagramNode(
@@ -17,6 +18,9 @@ data class DiagramNode(
     val x: Float = 0f,
     val y: Float = 0f,
     val color: String = "#3F51B5",
+    @get:PropertyName("isColorFilled")
+    @set:PropertyName("isColorFilled")
+    var isColorFilled: Boolean = false,
     val side: String = "RIGHT", // "LEFT", "RIGHT"
     val nodeType: String = "TASK" // "ROOT", "TASK"
 )

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -31,6 +32,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -47,12 +49,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.den.craftaday.backend.dataStructure.DiagramNode
+import androidx.core.graphics.toColorInt
 
 @Composable
 fun DiagramNodeItem(
     node: DiagramNode,
     isSelected: Boolean = false,
-    onMove: (Float, Float) -> Unit,
+    onDragStart: () -> Unit,
+    onDrag: (Float, Float) -> Unit,
+    onDragEnd: () -> Unit,
     onClick: () -> Unit,
     onToggleStatus: () -> Unit,
     onAddChild: () -> Unit
@@ -61,7 +66,7 @@ fun DiagramNodeItem(
 
     val accentColor = remember(node.color) {
         try {
-            Color(android.graphics.Color.parseColor(node.color))
+            Color(node.color.toColorInt())
         } catch (e: Exception) {
             Color(0xFF6200EE) // Fallback to a default color
         }
@@ -80,7 +85,10 @@ fun DiagramNodeItem(
     }
 
     val shape = RoundedCornerShape(14.dp)
-    val borderWidth = if (isSelected) 3.5.dp else 2.dp
+    val cardColor = if (node.isColorFilled) accentColor else MaterialTheme.colorScheme.surface
+    val contentColor = if (node.isColorFilled) Color.White else contentColorFor(cardColor)
+    
+    val borderWidth = if (isSelected) 3.5.dp else if (node.isColorFilled) 0.dp else 2.dp
     val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else accentColor
 
     Box(
@@ -95,10 +103,14 @@ fun DiagramNodeItem(
     ) {
         Card(
             shape = shape,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            colors = CardDefaults.cardColors(
+                containerColor = cardColor,
+                contentColor = contentColor
+            ),
             elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 8.dp else 4.dp),
             modifier = Modifier
                 .fillMaxWidth()
+                .height(110.dp)
                 .border(borderWidth, borderColor, shape)
                 .pointerInput(node.id) {
                     detectTapGestures(
@@ -106,17 +118,22 @@ fun DiagramNodeItem(
                     )
                 }
                 .pointerInput(node.id) {
-                    detectDragGestures { change, dragAmount ->
-                        change.consume()
-                        val dxDp = dragAmount.x / density.density
-                        val dyDp = dragAmount.y / density.density
-                        onMove(node.x + dxDp, node.y + dyDp)
-                    }
+                    detectDragGestures(
+                        onDragStart = { onDragStart() },
+                        onDragEnd = { onDragEnd() },
+                        onDragCancel = { onDragEnd() },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            val dxDp = dragAmount.x / density.density
+                            val dyDp = dragAmount.y / density.density
+                            onDrag(dxDp, dyDp)
+                        }
+                    )
                 }
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .padding(10.dp)
             ) {
                 // Top header: Status Toggle & Priority Tag
@@ -138,11 +155,18 @@ fun DiagramNodeItem(
                             isInProgress -> Icons.Default.Schedule
                             else -> Icons.Default.RadioButtonUnchecked
                         }
-                        val statusColor = when {
-                            isCompleted -> Color(0xFF4CAF50)
-                            isInProgress -> Color(0xFFFF9800)
-                            else -> Color.Gray
+                        
+                        // Adapt icon color for filled vs outlined
+                        val statusColor = if (node.isColorFilled) {
+                            contentColor
+                        } else {
+                            when {
+                                isCompleted -> Color(0xFF4CAF50)
+                                isInProgress -> Color(0xFFFF9800)
+                                else -> Color.Gray
+                            }
                         }
+                        
                         Icon(
                             imageVector = icon,
                             contentDescription = "Status",
@@ -164,14 +188,18 @@ fun DiagramNodeItem(
 
                     // Priority Pill
                     Surface(
-                        color = priorityColor.copy(alpha = 0.15f),
+                        color = if (node.isColorFilled) {
+                            Color.Black.copy(alpha = 0.2f)
+                        } else {
+                            priorityColor.copy(alpha = 0.15f)
+                        },
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
                             text = node.priority,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = priorityColor,
+                            color = if (node.isColorFilled) contentColor else priorityColor,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -184,7 +212,6 @@ fun DiagramNodeItem(
                     text = node.title,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isCompleted) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
                     textDecoration = if (isCompleted) TextDecoration.LineThrough else TextDecoration.None,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -195,13 +222,13 @@ fun DiagramNodeItem(
                     Text(
                         text = node.description,
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
+                        color = contentColor.copy(alpha = 0.7f),
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
                 // Progress Bar
                 LinearProgressIndicator(
@@ -210,8 +237,8 @@ fun DiagramNodeItem(
                         .fillMaxWidth()
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp)),
-                    color = accentColor,
-                    trackColor = Color.LightGray.copy(alpha = 0.4f),
+                    color = if (node.isColorFilled) contentColor else accentColor,
+                    trackColor = contentColor.copy(alpha = 0.2f),
                 )
             }
         }

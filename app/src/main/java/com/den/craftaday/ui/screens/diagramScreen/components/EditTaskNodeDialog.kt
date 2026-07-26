@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -26,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,8 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.den.craftaday.backend.dataStructure.DiagramNode
+import androidx.core.graphics.toColorInt
 
 val PRESET_COLORS = listOf(
     "#D94753", // SVG Red
@@ -62,7 +67,7 @@ fun EditTaskNodeDialog(
     isCreatingChild: Boolean = false,
     initialColor: String? = null,
     onDismiss: () -> Unit,
-    onSave: (title: String, description: String, priority: String, status: String, color: String, side: String) -> Unit,
+    onSave: (title: String, description: String, priority: String, status: String, color: String, side: String, isColorFilled: Boolean) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
     var title by remember(node) { mutableStateOf(node?.title ?: "") }
@@ -70,6 +75,7 @@ fun EditTaskNodeDialog(
     var priority by remember(node) { mutableStateOf(node?.priority ?: "MEDIUM") }
     var status by remember(node) { mutableStateOf(node?.status ?: "TODO") }
     var side by remember(node) { mutableStateOf(node?.side ?: "RIGHT") }
+    var isColorFilled by remember(node) { mutableStateOf(node?.isColorFilled ?: false) }
     var selectedColor by remember(node) { 
         mutableStateOf(node?.color ?: initialColor ?: "#3F51B5") 
     }
@@ -176,7 +182,7 @@ fun EditTaskNodeDialog(
                             .horizontalScroll(rememberScrollState())
                     ) {
                         PRESET_COLORS.forEach { hex ->
-                            val color = Color(android.graphics.Color.parseColor(hex))
+                            val color = Color(hex.toColorInt())
                             val isSelected = selectedColor.equals(hex, ignoreCase = true)
                             Box(
                                 modifier = Modifier
@@ -192,6 +198,32 @@ fun EditTaskNodeDialog(
                             )
                         }
                     }
+                    
+                    // Fill Color Toggle (Entire Row Toggleable)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .toggleable(
+                                value = isColorFilled,
+                                onValueChange = { isColorFilled = it },
+                                role = Role.Switch
+                            )
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Fill Background",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Switch(
+                            checked = isColorFilled,
+                            onCheckedChange = null // Handled by the Row's toggleable modifier
+                        )
+                    }
                 }
             }
         },
@@ -199,7 +231,14 @@ fun EditTaskNodeDialog(
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
-                        onSave(title, description, priority, status, selectedColor, side)
+                        onSave(
+                            title,
+                            description,
+                            priority,
+                            status,
+                            selectedColor,
+                            side,
+                            isColorFilled)
                     }
                 },
                 enabled = title.isNotBlank()

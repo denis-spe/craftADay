@@ -1,16 +1,23 @@
 // Glory be to the name of the LORD of host, The GOD of Israel.
 package com.den.craftaday.ui.screens.diagramScreen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -30,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,6 +56,7 @@ import androidx.core.graphics.toColorInt
 import com.den.craftaday.ui.screens.diagramScreen.components.DiagramFloatingButton
 import com.den.craftaday.ui.screens.diagramScreen.components.DiagramTopBar
 import com.den.craftaday.ui.screens.diagramScreen.components.LayoutBottomSheet
+import kotlinx.coroutines.delay
 
 /** dp-space anchor points for the connector between a parent and a child node. */
 private data class ConnectorAnchors(
@@ -193,10 +202,25 @@ fun DiagramScreen(
 
     var hasInitialized by remember { mutableStateOf(false) }
 
+    var draggingNodeId by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+
     val transformState = rememberTransformableState { centroid, zoomChange, panChange, _ ->
         scale.floatValue = (scale.floatValue * zoomChange).coerceIn(0.2f, 3f)
         // Natural transformation: Zoom around the centroid point
         offset.value = (offset.value - centroid) * zoomChange + centroid + panChange
+    }
+
+    var showZoomIndicator by remember { mutableStateOf(false) }
+
+    LaunchedEffect(scale.floatValue, transformState.isTransformInProgress) {
+        if (transformState.isTransformInProgress) {
+            showZoomIndicator = true
+        } else {
+            // Keep visible for a bit after transform ends
+            delay(1500)
+            showZoomIndicator = false
+        }
     }
 
     Scaffold(
@@ -326,20 +350,32 @@ fun DiagramScreen(
                         is DataState.Success -> {
                             val allNodes = result.data
 
-                            // PERFORMANCE: Pre-calculate node lookup and connectors
-                            val nodeMap = remember(allNodes) { allNodes.associateBy { it.id } }
-                            
-                            val filteredNodes = remember(allNodes, selectedStatusFilter, selectedPriorityFilter) {
-                                allNodes.filter { node ->
+                            // OPTIMISTIC UI: Override positions for the dragging node
+                            val effectiveNodes = remember(allNodes, draggingNodeId, dragOffset) {
+                                allNodes.map { node ->
+                                    if (node.id == draggingNodeId) {
+                                        node.copy(
+                                            x = node.x + dragOffset.x,
+                                            y = node.y + dragOffset.y
+                                        )
+                                    } else {
+                                        node
+                                    }
+                                }
+                            }
+                            val effectiveNodeMap = remember(effectiveNodes) { effectiveNodes.associateBy { it.id } }
+
+                            val filteredNodes = remember(effectiveNodes, selectedStatusFilter.value, selectedPriorityFilter.value) {
+                                effectiveNodes.filter { node ->
                                     val statusMatch = selectedStatusFilter.value == "ALL" || node.status == selectedStatusFilter.value
                                     val priorityMatch = selectedPriorityFilter.value == "ALL" || node.priority == selectedPriorityFilter.value
                                     statusMatch && priorityMatch
                                 }
                             }
 
-                            val connectorLines = remember(allNodes, currentLayoutType) {
-                                allNodes.mapNotNull { node ->
-                                    val parent = nodeMap[node.parentId ?: ""] ?: return@mapNotNull null
+                            val connectorLines = remember(effectiveNodes, currentLayoutType) {
+                                effectiveNodes.mapNotNull { node ->
+                                    val parent = effectiveNodeMap[node.parentId ?: ""] ?: return@mapNotNull null
                                     node to parent
                                 }
                             }
@@ -403,7 +439,7 @@ fun DiagramScreen(
 
                                     val lineColor = try {
                                         Color(node.color.toColorInt())
-                                    } catch (e: Exception) {
+                                    } catch (_: Exception) {
                                         Color.Gray
                                     }
 
@@ -444,13 +480,26 @@ fun DiagramScreen(
                                 }
                             }
 
-                            // Render Task Node Cards
+                                // Render Task Node Cards
                             filteredNodes.forEach { node ->
                                 DiagramNodeItem(
                                     node = node,
                                     isSelected = editingNode?.id == node.id,
-                                    onMove = { x, y -> viewModel.updateNodePosition(
-                                        projectId, node, x, y) },
+                                    onDragStart = {
+                                        draggingNodeId = node.id
+                                        dragOffset = Offset.Zero
+                                    },
+                                    onDrag = { dx, dy ->
+                                        dragOffset += Offset(dx, dy)
+                                    },
+                                    onDragEnd = {
+                                        val finalNode = effectiveNodeMap[node.id]
+                                        if (finalNode != null) {
+                                            viewModel.updateNodePosition(projectId, node, finalNode.x, finalNode.y)
+                                        }
+                                        draggingNodeId = null
+                                        dragOffset = Offset.Zero
+                                    },
                                     onClick = { editingNode = node },
                                     onToggleStatus = { viewModel.toggleTaskStatus(
                                         projectId,
@@ -463,6 +512,34 @@ fun DiagramScreen(
                     }
                 }
             }
+
+            // Zoom Percentage Overlay
+            AnimatedVisibility(
+                visible = showZoomIndicator,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
+                    .align(Alignment.TopCenter)
+            ) {
+                Box(contentAlignment = Alignment.TopCenter) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(0.8f),
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        shape = RoundedCornerShape(20.dp),
+                        tonalElevation = 3.dp,
+                        shadowElevation = 2.dp
+                    ) {
+                        Text(
+                            text = "${(scale.floatValue * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -472,7 +549,7 @@ fun DiagramScreen(
             node = null,
             isCreatingRoot = true,
             onDismiss = { isCreatingRoot.value = false },
-            onSave = { title, description, priority, status, color, side ->
+            onSave = { title, description, priority, status, color, side, isColorFilled ->
                 viewModel.addNode(
                     projectId = projectId,
                     title = title,
@@ -481,7 +558,8 @@ fun DiagramScreen(
                     status = status,
                     color = color,
                     side = side,
-                    parentId = null
+                    parentId = null,
+                    isColorFilled = isColorFilled
                 )
                 isCreatingRoot.value = false
             }
@@ -496,7 +574,7 @@ fun DiagramScreen(
             isCreatingChild = true,
             initialColor = parentNode?.color,
             onDismiss = { creatingChildForParentId = null },
-            onSave = { title, description, priority, status, color, side ->
+            onSave = { title, description, priority, status, color, side, isColorFilled ->
                 viewModel.addNode(
                     projectId = projectId,
                     title = title,
@@ -505,7 +583,8 @@ fun DiagramScreen(
                     status = status,
                     color = color,
                     side = side,
-                    parentId = creatingChildForParentId
+                    parentId = creatingChildForParentId,
+                    isColorFilled = isColorFilled
                 )
                 creatingChildForParentId = null
             }
@@ -517,7 +596,7 @@ fun DiagramScreen(
         EditTaskNodeDialog(
             node = editingNode,
             onDismiss = { editingNode = null },
-            onSave = { title, description, priority, status, color, side ->
+            onSave = { title, description, priority, status, color, side, isColorFilled ->
                 viewModel.updateNodeDetails(
                     projectId = projectId,
                     editingNode!!.copy(
@@ -526,7 +605,8 @@ fun DiagramScreen(
                         priority = priority,
                         status = status,
                         color = color,
-                        side = side
+                        side = side,
+                        isColorFilled = isColorFilled
                     )
                 )
                 editingNode = null

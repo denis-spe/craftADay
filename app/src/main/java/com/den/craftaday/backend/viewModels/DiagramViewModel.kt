@@ -43,13 +43,16 @@ private class LayoutNode(val node: DiagramNode) {
 
 /** Builds a parent->children lookup over the flat node list, keyed by node id. */
 private fun buildLayoutTree(currentList: List<DiagramNode>): Pair<Map<String, LayoutNode>, List<LayoutNode>> {
-    val nodeMap = currentList.associate { it.id to LayoutNode(it) }
+    val nodeMap = currentList.associateBy({ it.id }, { LayoutNode(it) })
     currentList.forEach { node ->
         if (node.parentId != null) {
             nodeMap[node.parentId]?.children?.add(nodeMap[node.id]!!)
         }
     }
-    val rootLayoutNodes = currentList.filter { it.parentId == null }.mapNotNull { nodeMap[it.id] }
+    val rootLayoutNodes = currentList.asSequence()
+        .filter { it.parentId == null }
+        .mapNotNull { nodeMap[it.id] }
+        .toList()
     return nodeMap to rootLayoutNodes
 }
 
@@ -82,7 +85,7 @@ class DiagramViewModel @Inject constructor(
                                 if (_layoutType.value != savedLayout) {
                                     _layoutType.value = savedLayout
                                 }
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 Log.e("DiagramViewModel", "Invalid layout type saved: ${p.layoutType}")
                             }
 
@@ -92,7 +95,7 @@ class DiagramViewModel @Inject constructor(
                                 if (_connectorType.value != savedConnector) {
                                     _connectorType.value = savedConnector
                                 }
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 Log.e("DiagramViewModel", "Invalid connector type saved: ${p.connectorType}")
                             }
                             DataState.Success(p) as DataState<DiagramProject>
@@ -150,6 +153,7 @@ class DiagramViewModel @Inject constructor(
     val connectorType: StateFlow<ConnectorType> = _connectorType.asStateFlow()
 
     fun updateConnectorType(projectId: String, type: ConnectorType) {
+        Log.d("DiagramViewModel", "Updating connector type for project $projectId to ${type.name}")
         _connectorType.value = type
         val project = (currentProject.value as? DataState.Success)?.data
         if (project != null && project.connectorType != type.name) {
@@ -167,12 +171,9 @@ class DiagramViewModel @Inject constructor(
         side: String = "RIGHT",
         parentId: String? = null,
         x: Float = 0f,
-        y: Float = 0f
+        y: Float = 0f,
+        isColorFilled: Boolean
     ) {
-        val nodeWidth = 200f
-        val verticalGap = 180f
-        val horizontalGap = 220f
-
         val currentList = (nodes.value as? DataState.Success<List<DiagramNode>>)?.data ?: emptyList()
 
         var calculatedX = x
@@ -214,7 +215,8 @@ class DiagramViewModel @Inject constructor(
             y = calculatedY,
             color = color,
             side = side,
-            nodeType = if (parentId == null) "ROOT" else "TASK"
+            nodeType = if (parentId == null) "ROOT" else "TASK",
+            isColorFilled = isColorFilled
         )
         diagramUseCase.addDiagramNode( projectId, node =  newNode)
     }
@@ -239,6 +241,12 @@ class DiagramViewModel @Inject constructor(
 
     fun updateNodePosition(projectId: String, node: DiagramNode, x: Float, y: Float) {
         diagramUseCase.updateDiagramNode(projectId = projectId, node = node.copy(x = x, y = y))
+    }
+
+    fun updateNodesPositions(projectId: String, updates: List<DiagramNode>) {
+        updates.forEach { node ->
+            diagramUseCase.updateDiagramNode(projectId = projectId, node = node)
+        }
     }
 
     fun reparentNode(
