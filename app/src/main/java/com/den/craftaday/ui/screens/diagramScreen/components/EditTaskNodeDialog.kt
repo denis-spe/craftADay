@@ -28,6 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -198,7 +199,8 @@ fun EditTaskNodeDialog(
                             )
                         }
                     }
-                    
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     // Fill Color Toggle (Entire Row Toggleable)
                     Row(
                         modifier = Modifier
@@ -221,7 +223,11 @@ fun EditTaskNodeDialog(
                         )
                         Switch(
                             checked = isColorFilled,
-                            onCheckedChange = null // Handled by the Row's toggleable modifier
+                            onCheckedChange = null, // Handled by the Row's toggleable modifier
+                            colors = SwitchDefaults.colors().copy(
+                                checkedThumbColor = Color(selectedColor.toColorInt()),
+                                checkedBorderColor = Color(selectedColor.toColorInt())
+                            )
                         )
                     }
                 }
