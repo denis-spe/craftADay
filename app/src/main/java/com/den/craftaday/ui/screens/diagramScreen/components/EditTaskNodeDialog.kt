@@ -54,6 +54,9 @@ import java.util.Calendar
 import java.util.Locale
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 
 val PRESET_COLORS = listOf(
     "#D94753", // SVG Red
@@ -78,7 +81,14 @@ fun EditTaskNodeDialog(
     isCreatingChild: Boolean = false,
     initialColor: String? = null,
     onDismiss: () -> Unit,
-    onSave: (title: String, description: String, priority: String, status: String, color: String, side: String, isColorFilled: Boolean, remainder: Timestamp, alarmRepeat: String) -> Unit,
+    onSave: (title: String,
+             description: String,
+             priority: String,
+             status: String,
+             color: String, side: String,
+             isColorFilled: Boolean,
+             remainder: Timestamp,
+             alarmRepeat: String) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -91,10 +101,14 @@ fun EditTaskNodeDialog(
     var isColorFilled by remember(node) { mutableStateOf(node?.isColorFilled ?: false) }
     var remainder by remember(node) { mutableStateOf(node?.remainder ?: Timestamp.now()) }
     var selectedColor by remember(node) { 
-        mutableStateOf(node?.color ?: initialColor ?: "#3F51B5") 
+        mutableStateOf(node?.color ?: initialColor ?: "#3F51B5")
     }
 
-    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
+    val is24Hour = android.text.format.DateFormat.is24HourFormat(context)
+    val dateFormatter = remember(is24Hour) { 
+        val pattern = if (is24Hour) "MMM dd, yyyy HH:mm" else "MMM dd, yyyy hh:mm a"
+        SimpleDateFormat(pattern, Locale.getDefault()) 
+    }
 
     fun showDateTimePicker() {
         val currentCalendar = Calendar.getInstance().apply {
@@ -117,7 +131,7 @@ fun EditTaskNodeDialog(
                     },
                     currentCalendar.get(Calendar.HOUR_OF_DAY),
                     currentCalendar.get(Calendar.MINUTE),
-                    false
+                    is24Hour
                 ).show()
             },
             currentCalendar.get(Calendar.YEAR),
@@ -139,160 +153,197 @@ fun EditTaskNodeDialog(
             Text(text = dialogTitle, style = MaterialTheme.typography.titleLarge)
         },
         text = {
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Task Title") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description") },
-                    maxLines = 3,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Priority Selection
-                Column {
-                    Text("Priority", style = MaterialTheme.typography.labelMedium)
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                    ) {
-                        PRIORITIES.forEach { pr ->
-                            FilterChip(
-                                selected = priority == pr,
-                                onClick = { priority = pr },
-                                label = { Text(pr, style = MaterialTheme.typography.labelSmall) }
-                            )
-                        }
-                    }
+                item {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("Task Title") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
-                // Status Selection
-                Column {
-                    Text("Status", style = MaterialTheme.typography.labelMedium)
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                    ) {
-                        STATUSES.forEach { st ->
-                            FilterChip(
-                                selected = status == st,
-                                onClick = { status = st },
-                                label = { Text(st.replace("_", " "), style = MaterialTheme.typography.labelSmall) }
-                            )
-                        }
-                    }
+                item {
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Description") },
+                        maxLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
-                // Side Selection (Only for Mind Map relevance, hidden for roots)
-                if (!isCreatingRoot && node?.nodeType != "ROOT") {
+                item {
+                    // Priority Selection
                     Column {
-                        Text("Mind Map Side", style = MaterialTheme.typography.labelMedium)
+                        Text("Priority", style = MaterialTheme.typography.labelMedium)
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
                         ) {
-                            SIDES.forEach { sd ->
+                            PRIORITIES.forEach { pr ->
                                 FilterChip(
-                                    selected = side == sd,
-                                    onClick = { side = sd },
-                                    label = { Text(sd, style = MaterialTheme.typography.labelSmall) }
+                                    selected = priority == pr,
+                                    onClick = { priority = pr },
+                                    label = {
+                                        Text(
+                                            pr,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
                                 )
                             }
                         }
                     }
                 }
 
-                // Remainder / Deadline Selection
-                Column {
-                    Text("Reminder", style = MaterialTheme.typography.labelMedium)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                            .clickable { showDateTimePicker() }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = dateFormatter.format(remainder.toDate()),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-
-                // Alarm Repeat Selection
-                Column {
-                    Text("Repeat", style = MaterialTheme.typography.labelMedium)
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                    ) {
-                        REPEAT_OPTIONS.forEach { opt ->
-                            FilterChip(
-                                selected = alarmRepeat == opt,
-                                onClick = { alarmRepeat = opt },
-                                label = { Text(opt, style = MaterialTheme.typography.labelSmall) }
-                            )
+                item {
+                    // Status Selection
+                    Column {
+                        Text("Status", style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                        ) {
+                            STATUSES.forEach { st ->
+                                FilterChip(
+                                    selected = status == st,
+                                    onClick = { status = st },
+                                    label = {
+                                        Text(
+                                            st.replace("_", " "),
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
 
-
-                // Color Selection
-                Column {
-                    Text("Color Tag", style = MaterialTheme.typography.labelMedium)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                    ) {
-                        PRESET_COLORS.forEach { hex ->
-                            val color = Color(hex.toColorInt())
-                            val isSelected = selectedColor.equals(hex, ignoreCase = true)
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .border(
-                                        width = if (isSelected) 3.dp else 0.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                                        shape = CircleShape
+                item {
+                    // Side Selection (Only for Mind Map relevance, hidden for roots)
+                    if (!isCreatingRoot && node?.nodeType != "ROOT") {
+                        Column {
+                            Text("Mind Map Side", style = MaterialTheme.typography.labelMedium)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                SIDES.forEach { sd ->
+                                    FilterChip(
+                                        selected = side == sd,
+                                        onClick = { side = sd },
+                                        label = {
+                                            Text(
+                                                sd,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
                                     )
-                                    .clickable { selectedColor = hex }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    // Remainder / Deadline Selection
+                    Column {
+                        Text("Reminder", style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                .clickable { showDateTimePicker() }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = dateFormatter.format(remainder.toDate()),
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
+                item {
+                    // Alarm Repeat Selection
+                    Column {
+                        Text("Repeat", style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                        ) {
+                            REPEAT_OPTIONS.forEach { opt ->
+                                FilterChip(
+                                    selected = alarmRepeat == opt,
+                                    onClick = { alarmRepeat = opt },
+                                    label = {
+                                        Text(
+                                            opt,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    // Color Selection
+                    Column {
+                        Text("Color Tag", style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                        ) {
+                            PRESET_COLORS.forEach { hex ->
+                                val color = Color(hex.toColorInt())
+                                val isSelected = selectedColor.equals(hex, ignoreCase = true)
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .border(
+                                            width = if (isSelected) 3.dp else 0.dp,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                            shape = CircleShape
+                                        )
+                                        .clickable { selectedColor = hex }
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                item {
                     // Fill Color Toggle (Entire Row Toggleable)
                     Row(
                         modifier = Modifier

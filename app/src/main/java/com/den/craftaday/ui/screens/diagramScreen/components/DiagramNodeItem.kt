@@ -1,6 +1,7 @@
 // Glory be to the name of the LORD of host, The GOD of Israel.
 package com.den.craftaday.ui.screens.diagramScreen.components
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,6 +66,7 @@ fun DiagramNodeItem(
     onToggleStatus: () -> Unit,
     onAddChild: () -> Unit
 ) {
+    Log.d("DiagramNodeItem", "Rendering node: ${node.isColorFilled}")
     val density = LocalDensity.current
 
     val accentColor = remember(node.color) {

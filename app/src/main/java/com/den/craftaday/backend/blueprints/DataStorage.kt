@@ -79,4 +79,5 @@ interface DataStorage {
     fun updateProject(userId: String, project: DiagramProject)
     fun getProject(userId: String, projectId: String): Flow<DiagramProject?>
     fun incrementUserStats(userId: String, isSuccess: Boolean)
+    fun updateDiagramNodeFields(userId: String, projectId: String, nodeId: String, fields: Map<String, Any>)
 }

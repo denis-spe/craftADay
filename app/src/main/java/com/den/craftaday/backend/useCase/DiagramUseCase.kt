@@ -44,6 +44,10 @@ class DiagramUseCase @Inject constructor(
         dataStorage.deleteDiagramNode(userId, diagramProjectId = projectId, nodeId = nodeId)
     }
 
+    fun updateDiagramNodeFields(projectId: String, nodeId: String, fields: Map<String, Any>) {
+        dataStorage.updateDiagramNodeFields(userId, projectId, nodeId, fields)
+    }
+
     fun incrementUserStats(isSuccess: Boolean) {
         dataStorage.incrementUserStats(userId, isSuccess)
     }

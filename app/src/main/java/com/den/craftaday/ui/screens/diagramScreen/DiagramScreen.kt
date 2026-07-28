@@ -653,20 +653,25 @@ fun DiagramScreen(
             node = editingNode,
             onDismiss = { editingNode = null },
             onSave = { title, description, priority, status, color, side, isColorFilled, remainder, alarmRepeat ->
+                val node = editingNode!!.copy(
+                    title = title,
+                    description = description,
+                    priority = priority,
+                    status = status,
+                    color = color,
+                    side = side,
+                    remainder = remainder,
+                    alarmRepeat = alarmRepeat,
+                    isColorFilled = isColorFilled
+                )
+
+                Log.d("DiagramScreen", "Saving updated node: ${node.id}. Remainder: ${node.remainder.toDate()}")
+
                 viewModel.updateNodeDetails(
                     projectId = projectId,
-                    editingNode!!.copy(
-                        title = title,
-                        description = description,
-                        priority = priority,
-                        status = status,
-                        color = color,
-                        side = side,
-                        isColorFilled = isColorFilled,
-                        remainder = remainder,
-                        alarmRepeat = alarmRepeat
-                    )
+                    node = node
                 )
+
                 editingNode = null
             },
             onDelete = {

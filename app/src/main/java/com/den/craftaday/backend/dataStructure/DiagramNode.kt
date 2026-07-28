@@ -12,10 +12,14 @@ data class DiagramNode(
     val parentId: String? = null,
     val title: String = "",
     val description: String = "",
-    val status: String = "TODO", // "TODO", "IN_PROGRESS", "COMPLETED"
+    val status: String = "TODO", // "TODO", "IN_PROGRESS", "COMPLETED", "FAILED"
     val priority: String = "MEDIUM", // "LOW", "MEDIUM", "HIGH", "URGENT"
-    val remainder: Timestamp = Timestamp.now(),
-    val alarmRepeat: String = "NONE", // "NONE", "DAILY", "WEEKLY", "MONTHLY"
+    @get:PropertyName("remainder")
+    @set:PropertyName("remainder")
+    var remainder: Timestamp = Timestamp.now(),
+    @get:PropertyName("alarmRepeat")
+    @set:PropertyName("alarmRepeat")
+    var alarmRepeat: String = "NONE", // "NONE", "DAILY", "WEEKLY", "MONTHLY"
     val progress: Float = 0f,
     val successCount: Int = 0,
     val failureCount: Int = 0,

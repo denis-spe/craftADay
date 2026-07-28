@@ -242,15 +242,22 @@ class DiagramViewModel @Inject constructor(
     }
 
     fun updateNodeDetails(projectId: String, node: DiagramNode) {
+        Log.d("DiagramViewModel", "updateNodeDetails called for node ${node.id}. New Remainder: ${node.remainder.toDate()}")
+        
+        // Directly update using the node object passed from the UI
         diagramUseCase.updateDiagramNode(projectId = projectId, node = node)
         
-        // Reschedule alarm (cancels old one automatically by using same request code)
-        alarmManager.scheduleAlarm(
-            projectId = projectId,
-            nodeId = node.id,
-            nodeTitle = node.title,
-            timestamp = node.remainder
-        )
+        // Reschedule alarm
+        if (node.status != "COMPLETED") {
+            alarmManager.scheduleAlarm(
+                projectId = projectId,
+                nodeId = node.id,
+                nodeTitle = node.title,
+                timestamp = node.remainder
+            )
+        } else {
+            alarmManager.cancelAlarm(node.id)
+        }
     }
 
     fun toggleTaskStatus(projectId: String, node: DiagramNode) {
@@ -267,7 +274,10 @@ class DiagramViewModel @Inject constructor(
             else -> 0f
         }
         
-        var updatedNode = node.copy(status = nextStatus, progress = updatedProgress)
+        val fields = mutableMapOf<String, Any>(
+            "status" to nextStatus,
+            "progress" to updatedProgress
+        )
 
         // If completed, increment stats and handle recurring alarms
         if (nextStatus == "COMPLETED") {
@@ -276,11 +286,10 @@ class DiagramViewModel @Inject constructor(
             if (node.alarmRepeat != "NONE") {
                 val nextTimestamp = calculateNextTimestamp(node.remainder, node.alarmRepeat)
                 // Reset recurring task for the next cycle
-                updatedNode = updatedNode.copy(
-                    status = "TODO",
-                    progress = 0f,
-                    remainder = nextTimestamp
-                )
+                fields["status"] = "TODO"
+                fields["progress"] = 0f
+                fields["remainder"] = nextTimestamp
+
                 // Schedule next alarm
                 alarmManager.scheduleAlarm(
                     projectId = projectId,
@@ -293,7 +302,11 @@ class DiagramViewModel @Inject constructor(
             }
         }
         
-        diagramUseCase.updateDiagramNode(projectId = projectId, node = updatedNode)
+        diagramUseCase.updateDiagramNodeFields(
+            projectId = projectId,
+            nodeId = node.id,
+            fields = fields
+        )
     }
 
     private fun calculateNextTimestamp(current: Timestamp, repeat: String): Timestamp {
@@ -317,13 +330,11 @@ class DiagramViewModel @Inject constructor(
     }
 
     fun updateNodePosition(projectId: String, node: DiagramNode, x: Float, y: Float) {
-        diagramUseCase.updateDiagramNode(projectId = projectId, node = node.copy(x = x, y = y))
-    }
-
-    fun updateNodesPositions(projectId: String, updates: List<DiagramNode>) {
-        updates.forEach { node ->
-            diagramUseCase.updateDiagramNode(projectId = projectId, node = node)
-        }
+        diagramUseCase.updateDiagramNodeFields(
+            projectId = projectId,
+            nodeId = node.id,
+            fields = mapOf("x" to x, "y" to y)
+        )
     }
 
     fun reparentNode(
@@ -397,9 +408,12 @@ class DiagramViewModel @Inject constructor(
 
     private fun applyPositions(projectId: String, nodeMap: Map<String, LayoutNode>) {
         nodeMap.values.forEach { layoutNode ->
-            val updated = layoutNode.node.copy(x = layoutNode.x, y = layoutNode.y)
-            if (updated.x != layoutNode.node.x || updated.y != layoutNode.node.y) {
-                diagramUseCase.updateDiagramNode(projectId = projectId, node = updated)
+            if (layoutNode.x != layoutNode.node.x || layoutNode.y != layoutNode.node.y) {
+                diagramUseCase.updateDiagramNodeFields(
+                    projectId = projectId,
+                    nodeId = layoutNode.node.id,
+                    fields = mapOf("x" to layoutNode.x, "y" to layoutNode.y)
+                )
             }
         }
     }

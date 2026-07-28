@@ -190,7 +190,7 @@ class DataStorageRepo(
             .document(node.id)
             .set(node)
             .addOnSuccessListener {
-                Log.w(TAG, "SUCCESS: Updated node '${node.title}' (ID: ${node.id}) for user: $userId in project: $diagramProjectId")
+                Log.w(TAG, "SUCCESS: Updated node '${node.title}' (ID: ${node.id}) for user: $userId in project: $diagramProjectId isFilledColor: ${node.isColorFilled}")
             }
             .addOnFailureListener {
                 Log.e(TAG, "FAILURE: Error updating node ${node.id} for user: $userId in project: $diagramProjectId. Error: ${it.message}", it)
@@ -205,6 +205,27 @@ class DataStorageRepo(
             .addOnFailureListener {
                 // If the document doesn't exist, create it
                 docRef.document(userId).set(mapOf(field to 1), com.google.firebase.firestore.SetOptions.merge())
+            }
+    }
+
+    override fun updateDiagramNodeFields(
+        userId: String,
+        projectId: String,
+        nodeId: String,
+        fields: Map<String, Any>
+    ) {
+        if (userId.isEmpty() || projectId.isEmpty() || nodeId.isEmpty()) return
+        docRef.document(userId)
+            .collection(PROJECTS_COLLECTION)
+            .document(projectId)
+            .collection(NODES_COLLECTION)
+            .document(nodeId)
+            .update(fields)
+            .addOnSuccessListener {
+                Log.d(TAG, "SUCCESS: Updated partial fields for node $nodeId: $fields")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "FAILURE: Error updating partial fields for node $nodeId", it)
             }
     }
 }
