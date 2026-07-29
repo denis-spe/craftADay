@@ -665,7 +665,7 @@ fun DiagramScreen(
                     isColorFilled = isColorFilled
                 )
 
-                Log.d("DiagramScreen", "Saving updated node: ${node.id}. Remainder: ${node.remainder.toDate()}")
+                Log.d("DiagramScreen", "Saving updated node: ${node.id}. Remainder: ${node.remainder?.toDate()}")
 
                 viewModel.updateNodeDetails(
                     projectId = projectId,

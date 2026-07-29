@@ -16,7 +16,7 @@ data class DiagramNode(
     val priority: String = "MEDIUM", // "LOW", "MEDIUM", "HIGH", "URGENT"
     @get:PropertyName("remainder")
     @set:PropertyName("remainder")
-    var remainder: Timestamp = Timestamp.now(),
+    var remainder: Timestamp? = null,
     @get:PropertyName("alarmRepeat")
     @set:PropertyName("alarmRepeat")
     var alarmRepeat: String = "NONE", // "NONE", "DAILY", "WEEKLY", "MONTHLY"

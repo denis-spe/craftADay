@@ -17,12 +17,19 @@ class DiagramAlarmManager @Inject constructor(
 ) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    fun scheduleAlarm(projectId: String, nodeId: String, nodeTitle: String, timestamp: Timestamp) {
+    fun scheduleAlarm(
+        projectId: String,
+        nodeId: String,
+        nodeTitle: String,
+        timestamp: Timestamp,
+        status: String = "TODO"
+    ) {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             action = "com.den.craftaday.ACTION_TASK_REMINDER"
             putExtra("projectId", projectId)
             putExtra("nodeId", nodeId)
             putExtra("nodeTitle", nodeTitle)
+            putExtra("status", status)
         }
 
         // Use nodeId.hashCode() as a unique request code for each node

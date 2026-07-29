@@ -20,11 +20,13 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -87,7 +90,7 @@ fun EditTaskNodeDialog(
              status: String,
              color: String, side: String,
              isColorFilled: Boolean,
-             remainder: Timestamp,
+             remainder: Timestamp?,
              alarmRepeat: String) -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
@@ -99,7 +102,7 @@ fun EditTaskNodeDialog(
     var side by remember(node) { mutableStateOf(node?.side ?: "RIGHT") }
     var alarmRepeat by remember(node) { mutableStateOf(node?.alarmRepeat ?: "NONE") }
     var isColorFilled by remember(node) { mutableStateOf(node?.isColorFilled ?: false) }
-    var remainder by remember(node) { mutableStateOf(node?.remainder ?: Timestamp.now()) }
+    var remainder by remember(node) { mutableStateOf(node?.remainder) }
     var selectedColor by remember(node) { 
         mutableStateOf(node?.color ?: initialColor ?: "#3F51B5")
     }
@@ -112,7 +115,7 @@ fun EditTaskNodeDialog(
 
     fun showDateTimePicker() {
         val currentCalendar = Calendar.getInstance().apply {
-            time = remainder.toDate()
+            time = remainder?.toDate() ?: java.util.Date()
         }
         
         DatePickerDialog(
@@ -267,27 +270,56 @@ fun EditTaskNodeDialog(
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                                 .clickable { showDateTimePicker() }
-                                .padding(12.dp),
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Notifications,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = if (remainder != null) MaterialTheme.colorScheme.primary else Color.Gray,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = dateFormatter.format(remainder.toDate()),
-                                style = MaterialTheme.typography.bodyMedium
+                                text = remainder?.let { dateFormatter.format(it.toDate()) } ?: "No reminder set",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (remainder != null) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                modifier = Modifier.weight(1f)
                             )
+                            if (remainder != null) {
+                                IconButton(
+                                    onClick = { 
+                                        remainder = null
+                                        alarmRepeat = "NONE"
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear",
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                        // Past time warning
+                        remainder?.let {
+                            if (it.toDate().time < System.currentTimeMillis()) {
+                                Text(
+                                    text = "Warning: Selected time is in the past.",
+                                    color = Color.Red,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
                         }
                     }
                 }
 
                 item {
                     // Alarm Repeat Selection
-                    Column {
+                    Column(modifier = Modifier.alpha(if (remainder != null) 1f else 0.5f)) {
                         Text("Repeat", style = MaterialTheme.typography.labelMedium)
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -298,13 +330,18 @@ fun EditTaskNodeDialog(
                             REPEAT_OPTIONS.forEach { opt ->
                                 FilterChip(
                                     selected = alarmRepeat == opt,
-                                    onClick = { alarmRepeat = opt },
+                                    onClick = { if (remainder != null) alarmRepeat = opt },
                                     label = {
                                         Text(
                                             opt,
                                             style = MaterialTheme.typography.labelSmall
                                         )
-                                    }
+                                    },
+                                    enabled = remainder != null || opt == "NONE",
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        disabledContainerColor = Color.Transparent,
+                                        disabledLabelColor = Color.Gray
+                                    )
                                 )
                             }
                         }

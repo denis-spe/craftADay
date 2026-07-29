@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.den.craftaday.backend.AlarmManager.DiagramAlarmManager
 import com.den.craftaday.backend.dataStructure.ConnectorType
-import java.util.Calendar
+import com.den.craftaday.helper.ReminderUtils
 import java.util.UUID
 import com.den.craftaday.backend.dataStructure.DiagramNode
 import com.den.craftaday.backend.dataStructure.DiagramProject
@@ -178,7 +178,7 @@ class DiagramViewModel @Inject constructor(
         x: Float = 0f,
         y: Float = 0f,
         isColorFilled: Boolean,
-        remainder: Timestamp,
+        remainder: Timestamp?,
         alarmRepeat: String = "NONE"
     ) {
         val currentList = (nodes.value as? DataState.Success<List<DiagramNode>>)?.data ?: emptyList()
@@ -233,27 +233,31 @@ class DiagramViewModel @Inject constructor(
         diagramUseCase.addDiagramNode(projectId, node = newNode)
 
         // Schedule alarm for the new node
-        alarmManager.scheduleAlarm(
-            projectId = projectId,
-            nodeId = newNode.id,
-            nodeTitle = newNode.title,
-            timestamp = newNode.remainder
-        )
+        remainder?.let {
+            alarmManager.scheduleAlarm(
+                projectId = projectId,
+                nodeId = newNode.id,
+                nodeTitle = newNode.title,
+                timestamp = it,
+                status = newNode.status
+            )
+        }
     }
 
     fun updateNodeDetails(projectId: String, node: DiagramNode) {
-        Log.d("DiagramViewModel", "updateNodeDetails called for node ${node.id}. New Remainder: ${node.remainder.toDate()}")
+        Log.d("DiagramViewModel", "updateNodeDetails called for node ${node.id}. New Remainder: ${node.remainder?.toDate()}")
         
         // Directly update using the node object passed from the UI
         diagramUseCase.updateDiagramNode(projectId = projectId, node = node)
         
         // Reschedule alarm
-        if (node.status != "COMPLETED") {
+        if (node.status != "COMPLETED" && node.remainder != null) {
             alarmManager.scheduleAlarm(
                 projectId = projectId,
                 nodeId = node.id,
                 nodeTitle = node.title,
-                timestamp = node.remainder
+                timestamp = node.remainder!!,
+                status = node.status
             )
         } else {
             alarmManager.cancelAlarm(node.id)
@@ -283,8 +287,8 @@ class DiagramViewModel @Inject constructor(
         if (nextStatus == "COMPLETED") {
             diagramUseCase.incrementUserStats(isSuccess = true)
             
-            if (node.alarmRepeat != "NONE") {
-                val nextTimestamp = calculateNextTimestamp(node.remainder, node.alarmRepeat)
+            if (node.alarmRepeat != "NONE" && node.remainder != null) {
+                val nextTimestamp = ReminderUtils.calculateNextTimestamp(node.remainder!!, node.alarmRepeat)
                 // Reset recurring task for the next cycle
                 fields["status"] = "TODO"
                 fields["progress"] = 0f
@@ -295,7 +299,8 @@ class DiagramViewModel @Inject constructor(
                     projectId = projectId,
                     nodeId = node.id,
                     nodeTitle = node.title,
-                    timestamp = nextTimestamp
+                    timestamp = nextTimestamp,
+                    status = node.status
                 )
             } else {
                 alarmManager.cancelAlarm(node.id)
@@ -307,26 +312,6 @@ class DiagramViewModel @Inject constructor(
             nodeId = node.id,
             fields = fields
         )
-    }
-
-    private fun calculateNextTimestamp(current: Timestamp, repeat: String): Timestamp {
-        val calendar = Calendar.getInstance().apply {
-            time = current.toDate()
-        }
-        when (repeat) {
-            "DAILY" -> calendar.add(Calendar.DAY_OF_YEAR, 1)
-            "WEEKLY" -> calendar.add(Calendar.WEEK_OF_YEAR, 1)
-            "MONTHLY" -> calendar.add(Calendar.MONTH, 1)
-        }
-        // Ensure the next time is in the future
-        while (calendar.timeInMillis <= System.currentTimeMillis()) {
-            when (repeat) {
-                "DAILY" -> calendar.add(Calendar.DAY_OF_YEAR, 1)
-                "WEEKLY" -> calendar.add(Calendar.WEEK_OF_YEAR, 1)
-                "MONTHLY" -> calendar.add(Calendar.MONTH, 1)
-            }
-        }
-        return Timestamp(calendar.time)
     }
 
     fun updateNodePosition(projectId: String, node: DiagramNode, x: Float, y: Float) {
