@@ -1,4 +1,4 @@
-package com.den.craftaday.backend.AlarmManager
+package com.den.craftaday.backend.alarmManager
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -12,13 +12,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DiagramAlarmManager @Inject constructor(
+class MapAlarmManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     fun scheduleAlarm(
-        projectId: String,
+        collectionId: String = "", // Default to empty for root maps
+        mapId: String,
         nodeId: String,
         nodeTitle: String,
         timestamp: Timestamp,
@@ -26,7 +27,8 @@ class DiagramAlarmManager @Inject constructor(
     ) {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             action = "com.den.craftaday.ACTION_TASK_REMINDER"
-            putExtra("projectId", projectId)
+            putExtra("collectionId", collectionId)
+            putExtra("mapId", mapId)
             putExtra("nodeId", nodeId)
             putExtra("nodeTitle", nodeTitle)
             putExtra("status", status)
@@ -43,7 +45,7 @@ class DiagramAlarmManager @Inject constructor(
         val triggerAtMillis = timestamp.toDate().time
         
         if (triggerAtMillis <= System.currentTimeMillis()) {
-            Log.w("DiagramAlarmManager", "Attempted to schedule alarm in the past for node $nodeId")
+            Log.w("MapAlarmManager", "Attempted to schedule alarm in the past for node $nodeId")
             return
         }
 
@@ -54,7 +56,7 @@ class DiagramAlarmManager @Inject constructor(
                     triggerAtMillis,
                     pendingIntent
                 )
-                Log.d("DiagramAlarmManager", "Scheduled EXACT alarm for node $nodeId at $triggerAtMillis")
+                Log.d("MapAlarmManager", "Scheduled EXACT alarm for node $nodeId at $triggerAtMillis")
             } else {
                 // Fallback for missing permission or older devices
                 alarmManager.setAndAllowWhileIdle(
@@ -62,10 +64,10 @@ class DiagramAlarmManager @Inject constructor(
                     triggerAtMillis,
                     pendingIntent
                 )
-                Log.d("DiagramAlarmManager", "Scheduled INEXACT fallback alarm for node $nodeId at $triggerAtMillis")
+                Log.d("MapAlarmManager", "Scheduled INEXACT fallback alarm for node $nodeId at $triggerAtMillis")
             }
         } catch (e: Exception) {
-            Log.e("DiagramAlarmManager", "Error scheduling alarm: ${e.message}")
+            Log.e("MapAlarmManager", "Error scheduling alarm: ${e.message}")
         }
     }
 
@@ -80,6 +82,6 @@ class DiagramAlarmManager @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         alarmManager.cancel(pendingIntent)
-        Log.d("DiagramAlarmManager", "Cancelled alarm for node $nodeId")
+        Log.d("MapAlarmManager", "Cancelled alarm for node $nodeId")
     }
 }

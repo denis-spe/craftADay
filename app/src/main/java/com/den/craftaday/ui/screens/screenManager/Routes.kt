@@ -31,4 +31,7 @@ data object ForgotPasswordRouter: NavKey
 data object SettingsRouter: NavKey
 
 @Serializable
-data class DiagramRouter(val projectId: String): NavKey
+data class MapRouter(val collectionId: String, val mapId: String): NavKey
+
+@Serializable
+data class CollectionDetailRouter(val collectionId: String): NavKey

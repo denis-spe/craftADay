@@ -1,5 +1,5 @@
-// Glory be to the LORD GOD of Israel
-package com.den.craftaday.ui.screens.diagramScreen.components
+// Glory be to the name of the LORD GOD of Israel
+package com.den.craftaday.ui.screens.mapScreen.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -27,15 +27,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.den.craftaday.backend.dataStructure.ConnectorType
-import com.den.craftaday.backend.viewModels.DiagramViewModel
+import com.den.craftaday.backend.viewModels.MapViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConnectorBottomSheet(
-    projectId: String,
-    viewModel: DiagramViewModel,
+    mapId: String, // Kept for consistency if needed later, but not used for VM call now
+    viewModel: MapViewModel,
     showConnectorSheet: MutableState<Boolean>,
     currentConnectorType: ConnectorType,
     sheetState: SheetState,
@@ -62,7 +62,7 @@ fun ConnectorBottomSheet(
                 Surface(
                     onClick = {
                         scope.launch {
-                            viewModel.updateConnectorType(projectId, type)
+                            viewModel.updateConnectorType(type)
                             sheetState.hide()
                         }.invokeOnCompletion {
                             if (!sheetState.isVisible) {

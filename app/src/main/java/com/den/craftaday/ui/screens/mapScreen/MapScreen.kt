@@ -1,5 +1,5 @@
 // Glory be to the name of the LORD of host, The GOD of Israel.
-package com.den.craftaday.ui.screens.diagramScreen
+package com.den.craftaday.ui.screens.mapScreen
 
 import android.Manifest
 import android.app.AlarmManager
@@ -53,20 +53,20 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.den.craftaday.backend.dataStructure.ConnectorType
-import com.den.craftaday.backend.dataStructure.DiagramNode
+import com.den.craftaday.backend.dataStructure.MapNode
 import com.den.craftaday.backend.dataStructure.LayoutType
 import com.den.craftaday.backend.states.DataState
-import com.den.craftaday.backend.viewModels.DiagramViewModel
-import com.den.craftaday.ui.screens.diagramScreen.components.ConnectorBottomSheet
-import com.den.craftaday.ui.screens.diagramScreen.components.DiagramNodeItem
-import com.den.craftaday.ui.screens.diagramScreen.components.EditTaskNodeDialog
+import com.den.craftaday.backend.viewModels.MapViewModel
+import com.den.craftaday.ui.screens.mapScreen.components.ConnectorBottomSheet
+import com.den.craftaday.ui.screens.mapScreen.components.MapNodeItem
+import com.den.craftaday.ui.screens.mapScreen.components.EditTaskNodeDialog
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.core.graphics.toColorInt
-import com.den.craftaday.ui.screens.diagramScreen.components.DiagramFloatingButton
-import com.den.craftaday.ui.screens.diagramScreen.components.DiagramTopBar
-import com.den.craftaday.ui.screens.diagramScreen.components.LayoutBottomSheet
+import com.den.craftaday.ui.screens.mapScreen.components.MapFloatingButton
+import com.den.craftaday.ui.screens.mapScreen.components.MapTopBar
+import com.den.craftaday.ui.screens.mapScreen.components.LayoutBottomSheet
 import kotlinx.coroutines.delay
 
 /** dp-space anchor points for the connector between a parent and a child node. */
@@ -88,8 +88,8 @@ private const val ARROW_GAP_DP = 4f
  * for the radial/grid layouts where the tree shape isn't spatially implied.
  */
 private fun computeConnectorAnchors(
-    parent: DiagramNode,
-    node: DiagramNode,
+    parent: MapNode,
+    node: MapNode,
     layoutType: LayoutType
 ): ConnectorAnchors = when (layoutType) {
     LayoutType.TOP_DOWN -> ConnectorAnchors(
@@ -140,13 +140,14 @@ private fun computeConnectorAnchors(
 
 
 private fun recenter(
-    nodes: List<DiagramNode>,
+    nodes: List<MapNode>,
     scale: MutableFloatState,
     offset: MutableState<Offset>,
     screenWidthPx: MutableFloatState,
     screenHeightPx: MutableFloatState,
     density: Density
 ) {
+    if (nodes.isEmpty()) return
     val minX = nodes.minOf { it.x }
     val minY = nodes.minOf { it.y }
     val maxX = nodes.maxOf { it.x }
@@ -179,9 +180,10 @@ private fun recenter(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiagramScreen(
-    projectId: String,
-    viewModel: DiagramViewModel
+fun MapScreen(
+    collectionId: String,
+    mapId: String,
+    viewModel: MapViewModel
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     
@@ -189,7 +191,7 @@ fun DiagramScreen(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
             if (!isGranted) {
-                Log.e("DiagramScreen", "Notification permission denied")
+                Log.e("MapScreen", "Notification permission denied")
             }
         }
     )
@@ -204,7 +206,7 @@ fun DiagramScreen(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             if (!alarmManager.canScheduleExactAlarms()) {
-                Log.d("DiagramScreen", "Exact alarm permission missing. Requesting user intervention.")
+                Log.d("MapScreen", "Exact alarm permission missing. Requesting user intervention.")
                 Toast.makeText(
                     context, 
                     "Please enable 'Alarms & Reminders' for CraftADay to ensure precise task deadlines.", 
@@ -216,27 +218,27 @@ fun DiagramScreen(
                     }
                     context.startActivity(intent)
                 } catch (e: Exception) {
-                    Log.e("DiagramScreen", "Failed to open exact alarm settings", e)
+                    Log.e("MapScreen", "Failed to open exact alarm settings", e)
                 }
             } else {
-                Log.d("DiagramScreen", "Exact alarm permission is already granted.")
+                Log.d("MapScreen", "Exact alarm permission is already granted.")
             }
         }
     }
 
-    LaunchedEffect(projectId) {
-        viewModel.setProjectId(projectId)
+    LaunchedEffect(collectionId, mapId) {
+        viewModel.setMapContext(collectionId, mapId)
     }
 
     val nodesState by viewModel.nodes.collectAsStateWithLifecycle()
     val currentLayoutType by viewModel.layoutType.collectAsStateWithLifecycle()
     val currentConnectorType by viewModel.connectorType.collectAsStateWithLifecycle()
-    val projectState by viewModel.currentProject.collectAsStateWithLifecycle()
+    val mapState by viewModel.currentMap.collectAsStateWithLifecycle()
 
     val scale = remember { mutableFloatStateOf(1f) }
     val offset = remember { mutableStateOf(Offset.Zero) }
 
-    var editingNode by remember { mutableStateOf<DiagramNode?>(null) }
+    var editingNode by remember { mutableStateOf<MapNode?>(null) }
     val isCreatingRoot = remember { mutableStateOf(false) }
     var creatingChildForParentId by remember { mutableStateOf<String?>(null) }
 
@@ -277,8 +279,8 @@ fun DiagramScreen(
 
     Scaffold(
         floatingActionButton = {
-            DiagramFloatingButton(
-                projectId = projectId,
+            MapFloatingButton(
+                mapId = mapId,
                 viewModel = viewModel,
                 showLayoutSheet = showLayoutSheet,
                 showConnectorSheet = showConnectorSheet,
@@ -289,8 +291,8 @@ fun DiagramScreen(
         },
 
         topBar = {
-            DiagramTopBar(
-                projectName = when (val result = projectState) {
+            MapTopBar(
+                mapTitle = when (val result = mapState) {
                     is DataState.Success -> result.data.title
                     else -> ""
                 },
@@ -532,9 +534,9 @@ fun DiagramScreen(
                                 }
                             }
 
-                                // Render Task Node Cards
+                                // Render Map Node Cards
                             filteredNodes.forEach { node ->
-                                DiagramNodeItem(
+                                MapNodeItem(
                                     node = node,
                                     isSelected = editingNode?.id == node.id,
                                     onDragStart = {
@@ -547,14 +549,13 @@ fun DiagramScreen(
                                     onDragEnd = {
                                         val finalNode = effectiveNodeMap[node.id]
                                         if (finalNode != null) {
-                                            viewModel.updateNodePosition(projectId, node, finalNode.x, finalNode.y)
+                                            viewModel.updateNodePosition(node, finalNode.x, finalNode.y)
                                         }
                                         draggingNodeId = null
                                         dragOffset = Offset.Zero
                                     },
                                     onClick = { editingNode = node },
                                     onToggleStatus = { viewModel.toggleTaskStatus(
-                                        projectId,
                                         node
                                     ) },
                                     onAddChild = { creatingChildForParentId = node.id }
@@ -603,7 +604,6 @@ fun DiagramScreen(
             onDismiss = { isCreatingRoot.value = false },
             onSave = { title, description, priority, status, color, side, isColorFilled, remainder, alarmRepeat ->
                 viewModel.addNode(
-                    projectId = projectId,
                     title = title,
                     description = description,
                     priority = priority,
@@ -630,7 +630,6 @@ fun DiagramScreen(
             onDismiss = { creatingChildForParentId = null },
             onSave = { title, description, priority, status, color, side, isColorFilled, remainder, alarmRepeat ->
                 viewModel.addNode(
-                    projectId = projectId,
                     title = title,
                     description = description,
                     priority = priority,
@@ -665,10 +664,9 @@ fun DiagramScreen(
                     isColorFilled = isColorFilled
                 )
 
-                Log.d("DiagramScreen", "Saving updated node: ${node.id}. Remainder: ${node.remainder?.toDate()}")
+                Log.d("MapScreen", "Saving updated node: ${node.id}. Remainder: ${node.remainder?.toDate()}")
 
                 viewModel.updateNodeDetails(
-                    projectId = projectId,
                     node = node
                 )
 
@@ -676,7 +674,6 @@ fun DiagramScreen(
             },
             onDelete = {
                 viewModel.deleteNodeAndSubtree(
-                    projectId = projectId,
                     nodeId = editingNode!!.id
                 )
                 editingNode = null
@@ -687,7 +684,7 @@ fun DiagramScreen(
     // Modal Bottom Sheet for Layout Selection
     if (showLayoutSheet.value) {
         LayoutBottomSheet(
-            projectId,
+            mapId,
             viewModel = viewModel,
             showLayoutSheet = showLayoutSheet,
             currentLayoutType = currentLayoutType,
@@ -714,7 +711,7 @@ fun DiagramScreen(
     // Modal Bottom Sheet for Connector Selection
     if (showConnectorSheet.value) {
         ConnectorBottomSheet(
-            projectId = projectId,
+            mapId = mapId,
             viewModel = viewModel,
             showConnectorSheet = showConnectorSheet,
             currentConnectorType = currentConnectorType,

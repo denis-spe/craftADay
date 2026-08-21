@@ -4,18 +4,18 @@ package com.den.craftaday.backend.viewModels
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.den.craftaday.backend.AlarmManager.DiagramAlarmManager
+import com.den.craftaday.backend.alarmManager.MapAlarmManager
 import com.den.craftaday.backend.dataStructure.ConnectorType
 import com.den.craftaday.helper.ReminderUtils
 import java.util.UUID
-import com.den.craftaday.backend.dataStructure.DiagramNode
-import com.den.craftaday.backend.dataStructure.DiagramProject
+import com.den.craftaday.backend.dataStructure.MapNode
+import com.den.craftaday.backend.dataStructure.ProjectMap
 import com.den.craftaday.backend.dataStructure.LayoutType
 import com.google.firebase.Timestamp
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.useCase.AuthorizationUseCase
-import com.den.craftaday.backend.useCase.DiagramUseCase
+import com.den.craftaday.backend.useCase.MapUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +38,7 @@ import kotlin.math.sqrt
  * Internal tree node used purely for layout calculations.
  * `weight` is repurposed per-algorithm (subtree width, subtree height, or leaf count).
  */
-private class LayoutNode(val node: DiagramNode) {
+private class LayoutNode(val node: MapNode) {
     val children = mutableListOf<LayoutNode>()
     var weight = 0f
     var x = 0f
@@ -46,7 +46,7 @@ private class LayoutNode(val node: DiagramNode) {
 }
 
 /** Builds a parent->children lookup over the flat node list, keyed by node id. */
-private fun buildLayoutTree(currentList: List<DiagramNode>): Pair<Map<String, LayoutNode>, List<LayoutNode>> {
+private fun buildLayoutTree(currentList: List<MapNode>): Pair<Map<String, LayoutNode>, List<LayoutNode>> {
     val nodeMap = currentList.associateBy({ it.id }, { LayoutNode(it) })
     currentList.forEach { node ->
         if (node.parentId != null) {
@@ -62,48 +62,50 @@ private fun buildLayoutTree(currentList: List<DiagramNode>): Pair<Map<String, La
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
-class DiagramViewModel @Inject constructor(
-    private val diagramUseCase: DiagramUseCase,
+class MapViewModel @Inject constructor(
+    private val mapUseCase: MapUseCase,
     val authorizationUseCase: AuthorizationUseCase,
-    private val alarmManager: DiagramAlarmManager
+    private val alarmManager: MapAlarmManager
 ) : ViewModel() {
 
-    private val _projectId = MutableStateFlow<String?>(null)
+    private val _mapId = MutableStateFlow<String?>(null)
+    private val _collectionId = MutableStateFlow<String?>(null)
 
-    fun setProjectId(projectId: String) {
-        if (_projectId.value != projectId) {
-            _projectId.value = projectId
-        }
+    fun setMapContext(collectionId: String, mapId: String) {
+        _collectionId.value = collectionId
+        _mapId.value = mapId
     }
 
-    val currentProject: StateFlow<DataState<DiagramProject>> = _projectId
-        .flatMapLatest { projectId ->
-            if (projectId == null) return@flatMapLatest emptyFlow<DataState<DiagramProject>>()
+    val currentMap: StateFlow<DataState<ProjectMap>> = _mapId
+        .flatMapLatest { mapId ->
+            val collectionId = _collectionId.value
+            if (mapId == null || collectionId == null) return@flatMapLatest emptyFlow<DataState<ProjectMap>>()
             authorizationUseCase.userState.flatMapLatest { authState ->
                 if (authState is AuthState.Authenticated) {
-                    diagramUseCase.getProject(projectId)
-                        .map { project ->
-                            val p = project ?: DiagramProject()
+                    mapUseCase.getMap(collectionId, mapId)
+                        .map { map ->
+                            val m = map ?: ProjectMap()
+                            
                             // Sync internal layout state with saved preference
                             try {
-                                val savedLayout = LayoutType.valueOf(p.layoutType)
+                                val savedLayout = LayoutType.valueOf(m.layoutType)
                                 if (_layoutType.value != savedLayout) {
                                     _layoutType.value = savedLayout
                                 }
                             } catch (_: Exception) {
-                                Log.e("DiagramViewModel", "Invalid layout type saved: ${p.layoutType}")
+                                Log.e("MapViewModel", "Invalid layout type saved: ${m.layoutType}")
                             }
 
                             // Sync connector style
                             try {
-                                val savedConnector = ConnectorType.valueOf(p.connectorType)
+                                val savedConnector = ConnectorType.valueOf(m.connectorType)
                                 if (_connectorType.value != savedConnector) {
                                     _connectorType.value = savedConnector
                                 }
                             } catch (_: Exception) {
-                                Log.e("DiagramViewModel", "Invalid connector type saved: ${p.connectorType}")
+                                Log.e("MapViewModel", "Invalid connector type saved: ${m.connectorType}")
                             }
-                            DataState.Success(p) as DataState<DiagramProject>
+                            DataState.Success(m) as DataState<ProjectMap>
                         }
                         .catch { emit(DataState.Error(it)) }
                 } else {
@@ -117,27 +119,28 @@ class DiagramViewModel @Inject constructor(
             initialValue = DataState.Loading
         )
 
-    val nodes: StateFlow<DataState<List<DiagramNode>>> = _projectId
-        .flatMapLatest { projectId ->
-            if (projectId == null) return@flatMapLatest emptyFlow<DataState<List<DiagramNode>>>()
+    val nodes: StateFlow<DataState<List<MapNode>>> = _mapId
+        .flatMapLatest { mapId ->
+            val collectionId = _collectionId.value
+            if (mapId == null || collectionId == null) return@flatMapLatest emptyFlow<DataState<List<MapNode>>>()
             authorizationUseCase.userState.flatMapLatest { authState ->
                 when (authState) {
                     is AuthState.Authenticated -> {
-                        Log.d("DiagramViewModel", "User authenticated. Starting observation for project: $projectId")
-                        diagramUseCase.getDiagramNodes(projectId)
-                            .onEach { Log.d("DiagramViewModel", "Fetched ${it.size} nodes for project: $projectId") }
-                            .map { DataState.Success(it) as DataState<List<DiagramNode>> }
+                        Log.d("MapViewModel", "User authenticated. Starting observation for map: $mapId")
+                        mapUseCase.getMapNodes(collectionId, mapId)
+                            .onEach { Log.d("MapViewModel", "Fetched ${it.size} nodes for map: $mapId") }
+                            .map { DataState.Success(it) as DataState<List<MapNode>> }
                             .catch {
-                                Log.e("DiagramViewModel", "Error in diagram flow for project: $projectId", it)
+                                Log.e("MapViewModel", "Error in map flow for map: $mapId", it)
                                 emit(DataState.Error(it))
                             }
                     }
                     is AuthState.NotAuthenticated -> {
-                        Log.d("DiagramViewModel", "User not authenticated. Emitting empty success state.")
-                        kotlinx.coroutines.flow.flowOf(DataState.Success(emptyList<DiagramNode>()))
+                        Log.d("MapViewModel", "User not authenticated. Emitting empty success state.")
+                        kotlinx.coroutines.flow.flowOf(DataState.Success(emptyList<MapNode>()))
                     }
                     else -> {
-                        Log.d("DiagramViewModel", "Auth state: $authState. Emitting Loading.")
+                        Log.d("MapViewModel", "Auth state: $authState. Emitting Loading.")
                         kotlinx.coroutines.flow.flowOf(DataState.Loading)
                     }
                 }
@@ -157,17 +160,18 @@ class DiagramViewModel @Inject constructor(
     private val _connectorType = MutableStateFlow(ConnectorType.BEZIER)
     val connectorType: StateFlow<ConnectorType> = _connectorType.asStateFlow()
 
-    fun updateConnectorType(projectId: String, type: ConnectorType) {
-        Log.d("DiagramViewModel", "Updating connector type for project $projectId to ${type.name}")
+    fun updateConnectorType(type: ConnectorType) {
+        val mapId = _mapId.value ?: return
+        val collectionId = _collectionId.value ?: return
+        Log.d("MapViewModel", "Updating connector type for map $mapId to ${type.name}")
         _connectorType.value = type
-        val project = (currentProject.value as? DataState.Success)?.data
-        if (project != null && project.connectorType != type.name) {
-            diagramUseCase.updateProject(project.copy(connectorType = type.name))
+        val map = (currentMap.value as? DataState.Success)?.data
+        if (map != null && map.connectorType != type.name) {
+            mapUseCase.updateMap(collectionId, map.copy(connectorType = type.name))
         }
     }
 
     fun addNode(
-        projectId: String,
         title: String,
         description: String = "",
         priority: String = "MEDIUM",
@@ -181,7 +185,9 @@ class DiagramViewModel @Inject constructor(
         remainder: Timestamp?,
         alarmRepeat: String = "NONE"
     ) {
-        val currentList = (nodes.value as? DataState.Success<List<DiagramNode>>)?.data ?: emptyList()
+        val mapId = _mapId.value ?: return
+        val collectionId = _collectionId.value ?: return
+        val currentList = (nodes.value as? DataState.Success<List<MapNode>>)?.data ?: emptyList()
 
         var calculatedX = x
         var calculatedY = y
@@ -212,9 +218,9 @@ class DiagramViewModel @Inject constructor(
             }
         }
 
-        val generatedId = if (parentId == null) UUID.randomUUID().toString() else UUID.randomUUID().toString()
+        val generatedId = UUID.randomUUID().toString()
 
-        val newNode = DiagramNode(
+        val newNode = MapNode(
             id = generatedId,
             title = title,
             description = description,
@@ -230,12 +236,13 @@ class DiagramViewModel @Inject constructor(
             remainder = remainder,
             alarmRepeat = alarmRepeat
         )
-        diagramUseCase.addDiagramNode(projectId, node = newNode)
+        mapUseCase.addMapNode(collectionId, mapId, node = newNode)
 
         // Schedule alarm for the new node
         remainder?.let {
             alarmManager.scheduleAlarm(
-                projectId = projectId,
+                collectionId = collectionId,
+                mapId = mapId,
                 nodeId = newNode.id,
                 nodeTitle = newNode.title,
                 timestamp = it,
@@ -244,16 +251,19 @@ class DiagramViewModel @Inject constructor(
         }
     }
 
-    fun updateNodeDetails(projectId: String, node: DiagramNode) {
-        Log.d("DiagramViewModel", "updateNodeDetails called for node ${node.id}. New Remainder: ${node.remainder?.toDate()}")
+    fun updateNodeDetails(node: MapNode) {
+        val mapId = _mapId.value ?: return
+        val collectionId = _collectionId.value ?: return
+        Log.d("MapViewModel", "updateNodeDetails called for node ${node.id}. New Remainder: ${node.remainder?.toDate()}")
         
         // Directly update using the node object passed from the UI
-        diagramUseCase.updateDiagramNode(projectId = projectId, node = node)
+        mapUseCase.updateMapNode(collectionId, mapId, node = node)
         
         // Reschedule alarm
         if (node.status != "COMPLETED" && node.remainder != null) {
             alarmManager.scheduleAlarm(
-                projectId = projectId,
+                collectionId = collectionId,
+                mapId = mapId,
                 nodeId = node.id,
                 nodeTitle = node.title,
                 timestamp = node.remainder!!,
@@ -264,7 +274,9 @@ class DiagramViewModel @Inject constructor(
         }
     }
 
-    fun toggleTaskStatus(projectId: String, node: DiagramNode) {
+    fun toggleTaskStatus(node: MapNode) {
+        val mapId = _mapId.value ?: return
+        val collectionId = _collectionId.value ?: return
         val nextStatus = when (node.status) {
             "TODO" -> "IN_PROGRESS"
             "IN_PROGRESS" -> "COMPLETED"
@@ -285,7 +297,7 @@ class DiagramViewModel @Inject constructor(
 
         // If completed, increment stats and handle recurring alarms
         if (nextStatus == "COMPLETED") {
-            diagramUseCase.incrementUserStats(isSuccess = true)
+            mapUseCase.incrementUserStats(isSuccess = true)
             
             if (node.alarmRepeat != "NONE" && node.remainder != null) {
                 val nextTimestamp = ReminderUtils.calculateNextTimestamp(node.remainder!!, node.alarmRepeat)
@@ -296,38 +308,44 @@ class DiagramViewModel @Inject constructor(
 
                 // Schedule next alarm
                 alarmManager.scheduleAlarm(
-                    projectId = projectId,
+                    collectionId = collectionId,
+                    mapId = mapId,
                     nodeId = node.id,
                     nodeTitle = node.title,
                     timestamp = nextTimestamp,
-                    status = node.status
+                    status = "TODO"
                 )
             } else {
                 alarmManager.cancelAlarm(node.id)
             }
         }
         
-        diagramUseCase.updateDiagramNodeFields(
-            projectId = projectId,
-            nodeId = node.id,
+        mapUseCase.updateMapNodeFields(
+            collectionId,
+            mapId,
+            node.id,
             fields = fields
         )
     }
 
-    fun updateNodePosition(projectId: String, node: DiagramNode, x: Float, y: Float) {
-        diagramUseCase.updateDiagramNodeFields(
-            projectId = projectId,
-            nodeId = node.id,
+    fun updateNodePosition(node: MapNode, x: Float, y: Float) {
+        val mapId = _mapId.value ?: return
+        val collectionId = _collectionId.value ?: return
+        mapUseCase.updateMapNodeFields(
+            collectionId,
+            mapId,
+            node.id,
             fields = mapOf("x" to x, "y" to y)
         )
     }
 
     fun reparentNode(
-        projectId: String,
-        node: DiagramNode,
+        node: MapNode,
         newParentId: String?
     ) {
-        val currentList = (nodes.value as? DataState.Success<List<DiagramNode>>)?.data ?: emptyList()
+        val mapId = _mapId.value ?: return
+        val collectionId = _collectionId.value ?: return
+        val currentList = (nodes.value as? DataState.Success<List<MapNode>>)?.data ?: emptyList()
         var newX = node.x
         var newY = node.y
 
@@ -338,11 +356,13 @@ class DiagramViewModel @Inject constructor(
                 newY = parent.y + 180f
             }
         }
-        diagramUseCase.updateDiagramNode(projectId = projectId, node = node.copy(parentId = newParentId, x = newX, y = newY))
+        mapUseCase.updateMapNode(collectionId, mapId, node = node.copy(parentId = newParentId, x = newX, y = newY))
     }
 
-    fun deleteNodeAndSubtree(projectId: String, nodeId: String) {
-        val currentList = (nodes.value as? DataState.Success<List<DiagramNode>>)?.data ?: emptyList()
+    fun deleteNodeAndSubtree(nodeId: String) {
+        val mapId = _mapId.value ?: return
+        val collectionId = _collectionId.value ?: return
+        val currentList = (nodes.value as? DataState.Success<List<MapNode>>)?.data ?: emptyList()
         val toDelete = mutableSetOf<String>()
 
         fun collectSubtree(id: String) {
@@ -352,13 +372,9 @@ class DiagramViewModel @Inject constructor(
 
         collectSubtree(nodeId)
         toDelete.forEach { id ->
-            diagramUseCase.deleteDiagramNode(projectId = projectId, nodeId = id)
+            mapUseCase.deleteMapNode(collectionId, mapId, nodeId = id)
             alarmManager.cancelAlarm(id)
         }
-    }
-
-    fun deleteNode(projectId: String, nodeId: String) {
-        deleteNodeAndSubtree(projectId = projectId, nodeId = nodeId)
     }
 
     /**
@@ -367,35 +383,38 @@ class DiagramViewModel @Inject constructor(
      * connectors appropriately for that layout's shape.
      */
     fun autoLayoutTree(
-        projectId: String,
         layoutType: LayoutType = LayoutType.TOP_DOWN
     ) {
-        val currentList = (nodes.value as? DataState.Success<List<DiagramNode>>)?.data ?: return
+        val mapId = _mapId.value ?: return
+        val collectionId = _collectionId.value ?: return
+        val currentList = (nodes.value as? DataState.Success<List<MapNode>>)?.data ?: return
         if (currentList.isEmpty()) return
 
         _layoutType.value = layoutType
 
-        // Persist the choice to the project document
-        val project = (currentProject.value as? DataState.Success)?.data
-        if (project != null && project.layoutType != layoutType.name) {
-            diagramUseCase.updateProject(project.copy(layoutType = layoutType.name))
+        // Persist the choice to the map document
+        val map = (currentMap.value as? DataState.Success)?.data
+        if (map != null && map.layoutType != layoutType.name) {
+            mapUseCase.updateMap(collectionId, map.copy(layoutType = layoutType.name))
         }
 
         when (layoutType) {
-            LayoutType.TOP_DOWN -> layoutTopDown(projectId, currentList)
-            LayoutType.LEFT_RIGHT -> layoutLeftRight(projectId, currentList)
-            LayoutType.RADIAL -> layoutRadial(projectId, currentList)
-            LayoutType.GRID -> layoutGrid(projectId, currentList)
-            LayoutType.MIND_MAP -> layoutMindMap(projectId, currentList)
-            LayoutType.BOTTOM_UP -> layoutBottomUp(projectId, currentList)
+            LayoutType.TOP_DOWN -> layoutTopDown(mapId, currentList)
+            LayoutType.LEFT_RIGHT -> layoutLeftRight(mapId, currentList)
+            LayoutType.RADIAL -> layoutRadial(mapId, currentList)
+            LayoutType.GRID -> layoutGrid(mapId, currentList)
+            LayoutType.MIND_MAP -> layoutMindMap(mapId, currentList)
+            LayoutType.BOTTOM_UP -> layoutBottomUp(mapId, currentList)
         }
     }
 
-    private fun applyPositions(projectId: String, nodeMap: Map<String, LayoutNode>) {
+    private fun applyPositions(mapId: String, nodeMap: Map<String, LayoutNode>) {
+        val collectionId = _collectionId.value ?: return
         nodeMap.values.forEach { layoutNode ->
             if (layoutNode.x != layoutNode.node.x || layoutNode.y != layoutNode.node.y) {
-                diagramUseCase.updateDiagramNodeFields(
-                    projectId = projectId,
+                mapUseCase.updateMapNodeFields(
+                    collectionId,
+                    mapId,
                     nodeId = layoutNode.node.id,
                     fields = mapOf("x" to layoutNode.x, "y" to layoutNode.y)
                 )
@@ -409,8 +428,8 @@ class DiagramViewModel @Inject constructor(
      * wide across the top-to-bottom layout with zero node overlaps.
      */
     private fun layoutTopDown(
-        projectId: String,
-        currentList: List<DiagramNode>
+        mapId: String,
+        currentList: List<MapNode>
     ) {
         val cardWidthDp = 200f
         val nodeGapDp = 40f
@@ -452,7 +471,7 @@ class DiagramViewModel @Inject constructor(
             currentRootX += root.weight + (nodeGapDp * 1.5f)
         }
 
-        applyPositions(projectId, nodeMap)
+        applyPositions(mapId, nodeMap)
     }
 
     /**
@@ -461,8 +480,8 @@ class DiagramViewModel @Inject constructor(
      * horizontally, siblings stack vertically with zero overlaps.
      */
     private fun layoutLeftRight(
-        projectId: String,
-        currentList: List<DiagramNode>
+        mapId: String,
+        currentList: List<MapNode>
     ) {
         val cardHeightDp = 110f
         val nodeGapDp = 30f
@@ -504,7 +523,7 @@ class DiagramViewModel @Inject constructor(
             currentRootY += root.weight + (nodeGapDp * 1.5f)
         }
 
-        applyPositions(projectId, nodeMap)
+        applyPositions(mapId, nodeMap)
     }
 
     /**
@@ -514,8 +533,8 @@ class DiagramViewModel @Inject constructor(
      * proportional to its leaf count so dense branches get more room.
      */
     private fun layoutRadial(
-        projectId: String,
-        currentList: List<DiagramNode>
+        mapId: String,
+        currentList: List<MapNode>
     ) {
         val ringRadiusStepDp = 240f
         val centerX = 900f
@@ -563,7 +582,7 @@ class DiagramViewModel @Inject constructor(
             rootLayoutNodes[0].y = centerY
         }
 
-        applyPositions(projectId, nodeMap)
+        applyPositions(mapId, nodeMap)
     }
 
     /**
@@ -572,8 +591,8 @@ class DiagramViewModel @Inject constructor(
      * depth then title, for a compact overview of everything at once.
      */
     private fun layoutGrid(
-        projectId: String,
-        currentList: List<DiagramNode>
+        mapId: String,
+        currentList: List<MapNode>
     ) {
         val cardWidthDp = 200f
         val cardHeightDp = 130f
@@ -583,7 +602,7 @@ class DiagramViewModel @Inject constructor(
         val (nodeMap, _) = buildLayoutTree(currentList)
         val byId = currentList.associateBy { it.id }
 
-        fun depthOf(node: DiagramNode): Int {
+        fun depthOf(node: MapNode): Int {
             var depth = 0
             var current = node
             while (current.parentId != null) {
@@ -604,7 +623,7 @@ class DiagramViewModel @Inject constructor(
             layoutNode.y = 80f + row * (cardHeightDp + gapDp)
         }
 
-        applyPositions(projectId, nodeMap)
+        applyPositions(mapId, nodeMap)
     }
 
     /**
@@ -613,8 +632,8 @@ class DiagramViewModel @Inject constructor(
      * subtrees grow upwards.
      */
     private fun layoutBottomUp(
-        projectId: String,
-        currentList: List<DiagramNode>
+        mapId: String,
+        currentList: List<MapNode>
     ) {
         val cardWidthDp = 200f
         val nodeGapDp = 40f
@@ -658,7 +677,7 @@ class DiagramViewModel @Inject constructor(
             currentRootX += root.weight + (nodeGapDp * 1.5f)
         }
 
-        applyPositions(projectId, nodeMap)
+        applyPositions(mapId, nodeMap)
     }
 
     /**
@@ -667,8 +686,8 @@ class DiagramViewModel @Inject constructor(
      * left and right sides. Subtrees grow outwards horizontally with zero overlaps.
      */
     private fun layoutMindMap(
-        projectId: String,
-        currentList: List<DiagramNode>
+        mapId: String,
+        currentList: List<MapNode>
     ) {
         val cardHeightDp = 110f
         val nodeGapDp = 30f
@@ -736,7 +755,7 @@ class DiagramViewModel @Inject constructor(
             currentRootY += root.weight + (nodeGapDp * 1.5f)
         }
 
-        applyPositions(projectId, nodeMap)
+        applyPositions(mapId, nodeMap)
     }
 
 }

@@ -13,17 +13,19 @@ class TaskUseCase @Inject constructor(
 ) {
     private val userId get() = accountService.currentUserId
 
-    fun addTask(task: Task) {
-        dataStorage.addTask(userId = userId, task = task)
+    fun addTask(collectionId: String, task: Task) {
+        dataStorage.addTask(userId = userId, collectionId = collectionId, task = task)
     }
 
     fun getAllTasks() = dataStorage.getAllDatasets(userId = userId)
 
-    fun deleteTask(task: Task) {
-        dataStorage.deleteTask(userId = userId, task = task)
+    fun getTasksInCollection(collectionId: String) = dataStorage.getTasksInCollection(userId, collectionId)
+
+    fun deleteTask(collectionId: String, task: Task) {
+        dataStorage.deleteTask(userId = userId, collectionId = collectionId, task = task)
     }
 
-    fun updateTask(task: Task) {
-        dataStorage.updateTask(userId = userId, task = task)
+    fun updateTask(collectionId: String, task: Task) {
+        dataStorage.updateTask(userId = userId, collectionId = collectionId, task = task)
     }
 }

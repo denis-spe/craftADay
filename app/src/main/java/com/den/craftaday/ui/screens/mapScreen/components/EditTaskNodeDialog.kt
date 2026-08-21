@@ -1,5 +1,5 @@
 // Glory be to the name of the LORD of host, The GOD of Israel.
-package com.den.craftaday.ui.screens.diagramScreen.components
+package com.den.craftaday.ui.screens.mapScreen.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,7 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.den.craftaday.backend.dataStructure.DiagramNode
+import com.den.craftaday.backend.dataStructure.MapNode
 import com.google.firebase.Timestamp
 import androidx.core.graphics.toColorInt
 import java.text.SimpleDateFormat
@@ -58,8 +58,6 @@ import java.util.Locale
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 
 val PRESET_COLORS = listOf(
     "#D94753", // SVG Red
@@ -79,7 +77,7 @@ val REPEAT_OPTIONS = listOf("NONE", "DAILY", "WEEKLY", "MONTHLY")
 
 @Composable
 fun EditTaskNodeDialog(
-    node: DiagramNode?,
+    node: MapNode?,
     isCreatingRoot: Boolean = false,
     isCreatingChild: Boolean = false,
     initialColor: String? = null,
@@ -145,7 +143,7 @@ fun EditTaskNodeDialog(
 
 
     val dialogTitle = when {
-        isCreatingRoot -> "Add Root DiagramProject Node"
+        isCreatingRoot -> "Add Root Map Node"
         isCreatingChild -> "Add Child Task Node"
         else -> "Edit Task Node"
     }

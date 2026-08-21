@@ -1,5 +1,5 @@
 // Glory be the name of LORD GOD of hosts
-package com.den.craftaday.ui.screens.diagramScreen.components
+package com.den.craftaday.ui.screens.mapScreen.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,8 +30,8 @@ import com.den.craftaday.helper.toTitle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiagramTopBar(
-    projectName: String,
+fun MapTopBar(
+    mapTitle: String,
     currentLayoutType: LayoutType,
     scale: MutableState<Float>,
     onRecenter: () -> Unit,
@@ -44,7 +44,7 @@ fun DiagramTopBar(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = projectName,
+                    text = mapTitle,
                     style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
                     fontWeight = FontWeight.Bold
                 )

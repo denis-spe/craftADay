@@ -1,6 +1,6 @@
 // Love the LORD your GOD with all your soul and with all your mind and with all your might
 // and love your neighbor as your self
-package com.den.craftaday.ui.screens.diagramScreen.components
+package com.den.craftaday.ui.screens.mapScreen.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -12,8 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.ForkLeft
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Schema
@@ -34,15 +32,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.den.craftaday.backend.dataStructure.LayoutType
-import com.den.craftaday.backend.viewModels.DiagramViewModel
+import com.den.craftaday.backend.viewModels.MapViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LayoutBottomSheet(
-    projectId: String,
-    viewModel: DiagramViewModel,
+    mapId: String, // Kept for consistency
+    viewModel: MapViewModel,
     showLayoutSheet: MutableState<Boolean>,
     currentLayoutType: LayoutType,
     sheetState: SheetState,
@@ -79,7 +77,6 @@ fun LayoutBottomSheet(
                             onClick = {
                                 scope.launch {
                                     viewModel.autoLayoutTree(
-                                        projectId,
                                         type
                                     )
                                     onLayoutSelected()
@@ -105,7 +102,7 @@ fun LayoutBottomSheet(
                                     Icon(
                                         imageVector = when (type) {
                                             LayoutType.TOP_DOWN -> Icons.Default.VerticalAlignBottom
-                                            LayoutType.LEFT_RIGHT -> Icons.Default.ForkLeft // Should maybe use different icons
+                                            LayoutType.LEFT_RIGHT -> Icons.Default.ForkLeft
                                             LayoutType.RADIAL -> Icons.Default.AccountTree
                                             LayoutType.GRID -> Icons.Default.GridOn
                                             LayoutType.MIND_MAP -> Icons.Default.Schema
@@ -136,4 +133,3 @@ fun LayoutBottomSheet(
         }
     }
 }
-

@@ -5,7 +5,7 @@ import androidx.compose.runtime.Stable
 import com.google.firebase.firestore.DocumentId
 
 @Stable
-data class DiagramProject(
+data class ProjectMap(
     @DocumentId val id: String = "",
     val title: String = "",
     val description: String = "",

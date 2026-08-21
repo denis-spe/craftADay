@@ -7,7 +7,7 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.PropertyName
 
 @Stable
-data class DiagramNode(
+data class MapNode(
     @DocumentId val id: String = "",
     val parentId: String? = null,
     val title: String = "",

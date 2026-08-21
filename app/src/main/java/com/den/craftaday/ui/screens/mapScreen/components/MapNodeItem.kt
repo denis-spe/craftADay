@@ -1,5 +1,5 @@
 // Glory be to the name of the LORD of host, The GOD of Israel.
-package com.den.craftaday.ui.screens.diagramScreen.components
+package com.den.craftaday.ui.screens.mapScreen.components
 
 import android.util.Log
 import androidx.compose.foundation.background
@@ -25,10 +25,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -52,12 +50,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.den.craftaday.backend.dataStructure.DiagramNode
+import com.den.craftaday.backend.dataStructure.MapNode
 import androidx.core.graphics.toColorInt
 
 @Composable
-fun DiagramNodeItem(
-    node: DiagramNode,
+fun MapNodeItem(
+    node: MapNode,
     isSelected: Boolean = false,
     onDragStart: () -> Unit,
     onDrag: (Float, Float) -> Unit,
@@ -66,7 +64,7 @@ fun DiagramNodeItem(
     onToggleStatus: () -> Unit,
     onAddChild: () -> Unit
 ) {
-    Log.d("DiagramNodeItem", "Rendering node: ${node.isColorFilled}")
+    Log.d("MapNodeItem", "Rendering node: ${node.isColorFilled}")
     val density = LocalDensity.current
 
     val accentColor = remember(node.color) {

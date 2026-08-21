@@ -8,7 +8,10 @@ import com.google.firebase.firestore.DocumentId
 @Stable
 data class Task(
     @DocumentId val id: String = "",
+    val collectionId: String = "",
     val title: String = "",
     val description: String = "",
-    val date: Timestamp = Timestamp.now(),
+    val createdAt: Timestamp = Timestamp.now(),
+    val remainder: Long = 0L,
+    val mark: Mark = Mark.Initial,
 )

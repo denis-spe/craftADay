@@ -2,13 +2,12 @@
 package com.den.craftaday.backend.repositories
 
 import android.util.Log
-import com.den.craftaday.backend.dataStructure.DiagramNode
+import com.den.craftaday.backend.dataStructure.MapNode
 import com.den.craftaday.backend.dataStructure.Task
 import com.den.craftaday.backend.blueprints.DataStorage
-import com.den.craftaday.backend.dataStructure.DiagramProject
-import com.google.firebase.firestore.FieldPath
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
+import com.den.craftaday.backend.dataStructure.ProjectMap
+import com.den.craftaday.backend.dataStructure.ListCollection
+import com.google.firebase.firestore.*
 import com.google.firebase.firestore.dataObjects
 import kotlinx.coroutines.flow.map
 
@@ -18,13 +17,14 @@ class DataStorageRepo(
     companion object {
         const val DATASET_COLLECTION = "craftADayDataset"
         const val TASKS_COLLECTION = "tasks"
-        const val PROJECTS_COLLECTION = "projects"
+        const val MAPS_COLLECTION = "projects"
         const val NODES_COLLECTION = "nodes"
+        const val COLLECTION = "collection"
 
         const val TAG = "DataStorageRepo"
     }
 
-    val docRef = firestore
+    private val docRef = firestore
         .collection(DATASET_COLLECTION)
 
 
@@ -33,12 +33,37 @@ class DataStorageRepo(
         .collection(TASKS_COLLECTION)
         .dataObjects<Task>()
 
-    override fun addTask(userId: String, task: Task) {
+    override fun getTasksInCollection(userId: String, collectionId: String) = docRef
+        .document(userId)
+        .collection(COLLECTION)
+        .document(collectionId)
+        .collection(TASKS_COLLECTION)
+        .dataObjects<Task>()
+
+    override fun addCollection(
+        userId: String,
+        collection: ListCollection
+    ) {
+        val collectionRef = docRef.document(userId)
+            .collection(COLLECTION)
+            .document()
+
+        val collectionCopy = collection.copy(id = collectionRef.id)
+        collectionRef.set(collectionCopy)
+    }
+
+    override fun addTask(
+        userId: String,
+        collectionId: String,
+        task: Task
+    ) {
          docRef.document(userId)
+             .collection(COLLECTION)
+            .document(collectionId)
             .collection(TASKS_COLLECTION)
             .add(task)
             .addOnSuccessListener {
-                Log.w(TAG, "Task added successfully")
+                Log.w(TAG, "Task added successfully to collection $collectionId")
             }
             .addOnFailureListener {
                 Log.e(TAG, "Error adding task: $it")
@@ -47,154 +72,179 @@ class DataStorageRepo(
 
     override fun deleteTask(
         userId: String,
+        collectionId: String,
         task: Task
     ) {
         docRef.document(userId)
+            .collection(COLLECTION)
+            .document(collectionId)
             .collection(TASKS_COLLECTION)
             .document(task.id)
             .delete()
-            .addOnSuccessListener {
-                Log.w(TAG, "Task deleted successfully")
-            }
-            .addOnFailureListener {
-                Log.e(TAG, "Error deleting task: $it")
-            }
     }
 
     override fun updateTask(
         userId: String,
+        collectionId: String,
         task: Task
     ) {
         docRef.document(userId)
+            .collection(COLLECTION)
+            .document(collectionId)
             .collection(TASKS_COLLECTION)
             .document(task.id)
             .set(task)
-            .addOnSuccessListener {
-                Log.w(TAG, "Task updated successfully")
-            }
-            .addOnFailureListener {
-                Log.e(TAG, "Error updating task: $it")
-            }
     }
 
-    override fun getProject(userId: String, projectId: String) = docRef
+    override fun getMap(
+        userId: String,
+        collectionId: String,
+        mapId: String
+    ) = docRef
         .document(userId)
-        .collection(PROJECTS_COLLECTION)
-        .whereEqualTo(FieldPath.documentId(), projectId)
-        .dataObjects<DiagramProject>()
+        .collection(COLLECTION)
+        .document(collectionId)
+        .collection(MAPS_COLLECTION)
+        .whereEqualTo(FieldPath.documentId(), mapId)
+        .dataObjects<ProjectMap>()
         .map { it.firstOrNull() }
 
-    override fun addProject(userId: String, project: DiagramProject) {
+    override fun addMap(userId: String, collectionId: String, map: ProjectMap) {
         docRef.document(userId)
-            .collection(PROJECTS_COLLECTION)
-            .add(project)
+            .collection(COLLECTION)
+            .document(collectionId)
+            .collection(MAPS_COLLECTION)
+            .add(map)
     }
 
-    override fun deleteProject(userId: String, project: DiagramProject) {
+    override fun deleteMap(userId: String, collectionId: String, map: ProjectMap) {
         docRef.document(userId)
-            .collection(PROJECTS_COLLECTION)
-            .document(project.id)
+            .collection(COLLECTION)
+            .document(collectionId)
+            .collection(MAPS_COLLECTION)
+            .document(map.id)
             .delete()
     }
 
 
-    override fun updateProject(userId: String, project: DiagramProject) {
+    override fun updateMap(userId: String, collectionId: String, map: ProjectMap) {
         docRef.document(userId)
-            .collection(PROJECTS_COLLECTION)
-            .document(project.id)
-            .set(project)
+            .collection(COLLECTION)
+            .document(collectionId)
+            .collection(MAPS_COLLECTION)
+            .document(map.id)
+            .set(map)
     }
 
 
-    override fun getAllProjects(userId: String) = docRef
+    override fun getAllMaps(userId: String) = docRef
         .document(userId)
-        .collection(PROJECTS_COLLECTION)
-        .dataObjects<DiagramProject>()
+        .collection(MAPS_COLLECTION)
+        .dataObjects<ProjectMap>()
 
-    override fun getDiagramNodes(
-        userId: String,
-        diagramProjectId: String,
-    ) = docRef
+    override fun getMapsInCollection(userId: String, collectionId: String) = docRef
         .document(userId)
-        .collection(PROJECTS_COLLECTION)
-        .document(diagramProjectId)
-        .collection(NODES_COLLECTION)
-        .dataObjects<DiagramNode>()
+        .collection(COLLECTION)
+        .document(collectionId)
+        .collection(MAPS_COLLECTION)
+        .dataObjects<ProjectMap>()
 
-    override fun addDiagramNode(
+    override fun getMapNodes(
         userId: String,
-        diagramProjectId: String,
-        node: DiagramNode
-    ) {
-        if (userId.isEmpty()) {
-            Log.e(TAG, "FAILED to add node: userId is empty. Node: ${node.title}")
-            return
+        collectionId: String,
+        mapId: String,
+    ): kotlinx.coroutines.flow.Flow<List<MapNode>> {
+        val path = if (collectionId.isEmpty()) {
+            // Root path for old maps
+            docRef.document(userId)
+                .collection(MAPS_COLLECTION)
+                .document(mapId)
+        } else {
+            // Nested path for new maps
+            docRef.document(userId)
+                .collection(COLLECTION)
+                .document(collectionId)
+                .collection(MAPS_COLLECTION)
+                .document(mapId)
         }
+        return path.collection(NODES_COLLECTION).dataObjects<MapNode>()
+    }
+
+    override fun addMapNode(
+        userId: String,
+        collectionId: String,
+        mapId: String,
+        node: MapNode
+    ) {
+        if (userId.isEmpty()) return
         
-        val collection = docRef.document(userId)
-            .collection(PROJECTS_COLLECTION)
-            .document(diagramProjectId)
-            .collection(NODES_COLLECTION)
+        val collection = if (collectionId.isEmpty()) {
+            docRef.document(userId)
+                .collection(MAPS_COLLECTION)
+                .document(mapId)
+        } else {
+            docRef.document(userId)
+                .collection(COLLECTION)
+                .document(collectionId)
+                .collection(MAPS_COLLECTION)
+                .document(mapId)
+        }.collection(NODES_COLLECTION)
             
-        // If node has an ID, use it (pre-generated), otherwise let Firestore add it
-        val task = if (node.id.isEmpty()) {
+        val dbTask = if (node.id.isEmpty()) {
             collection.add(node)
         } else {
             collection.document(node.id).set(node)
         }
 
-        task.addOnSuccessListener {
-            Log.w(TAG, "SUCCESS: Added/Set node '${node.title}' for user: $userId in project: $diagramProjectId")
-        }
-        .addOnFailureListener {
-            Log.e(TAG, "FAILURE: Error adding node '${node.title}' for user: $userId in project: $diagramProjectId. Error: ${it.message}", it)
+        dbTask.addOnSuccessListener {
+            Log.w(TAG, "SUCCESS: Added/Set node '${node.title}' in map: $mapId")
         }
     }
 
-    override fun deleteDiagramNode(
+    override fun deleteMapNode(
         userId: String,
-        diagramProjectId: String,
+        collectionId: String,
+        mapId: String,
         nodeId: String
     ) {
-        if (userId.isEmpty() || nodeId.isEmpty()) {
-            Log.e(TAG, "FAILED to delete node: userId or nodeId is empty. User: $userId, Node: $nodeId")
-            return
+        if (userId.isEmpty() || nodeId.isEmpty()) return
+        val path = if (collectionId.isEmpty()) {
+            docRef.document(userId)
+                .collection(MAPS_COLLECTION)
+                .document(mapId)
+        } else {
+            docRef.document(userId)
+                .collection(COLLECTION)
+                .document(collectionId)
+                .collection(MAPS_COLLECTION)
+                .document(mapId)
         }
-        docRef.document(userId)
-            .collection(PROJECTS_COLLECTION)
-            .document(diagramProjectId)
-            .collection(NODES_COLLECTION)
+        path.collection(NODES_COLLECTION)
             .document(nodeId)
             .delete()
-            .addOnSuccessListener {
-                Log.w(TAG, "SUCCESS: Deleted node ID: $nodeId for user: $userId in project: $diagramProjectId")
-            }
-            .addOnFailureListener {
-                Log.e(TAG, "FAILURE: Error deleting node $nodeId for user: $userId in project: $diagramProjectId. Error: ${it.message}", it)
-            }
     }
 
-    override fun updateDiagramNode(
+    override fun updateMapNode(
         userId: String,
-        diagramProjectId: String,
-        node: DiagramNode
+        collectionId: String,
+        mapId: String,
+        node: MapNode
     ) {
-        if (userId.isEmpty() || node.id.isEmpty()) {
-            Log.e(TAG, "FAILED to update node: userId or nodeId is empty. User: $userId, Node: ${node.id}")
-            return
+        if (userId.isEmpty() || node.id.isEmpty()) return
+        val path = if (collectionId.isEmpty()) {
+            docRef.document(userId)
+                .collection(MAPS_COLLECTION)
+                .document(mapId)
+        } else {
+            docRef.document(userId)
+                .collection(COLLECTION)
+                .document(collectionId)
+                .collection(MAPS_COLLECTION)
+                .document(mapId)
         }
-        docRef.document(userId)
-            .collection(PROJECTS_COLLECTION)
-            .document(diagramProjectId)
-            .collection(NODES_COLLECTION)
+        path.collection(NODES_COLLECTION)
             .document(node.id)
             .set(node)
-            .addOnSuccessListener {
-                Log.w(TAG, "SUCCESS: Updated node '${node.title}' (ID: ${node.id}) for user: $userId in project: $diagramProjectId isFilledColor: ${node.isColorFilled}")
-            }
-            .addOnFailureListener {
-                Log.e(TAG, "FAILURE: Error updating node ${node.id} for user: $userId in project: $diagramProjectId. Error: ${it.message}", it)
-            }
     }
 
     override fun incrementUserStats(userId: String, isSuccess: Boolean) {
@@ -203,29 +253,36 @@ class DataStorageRepo(
         docRef.document(userId)
             .update(field, FieldValue.increment(1))
             .addOnFailureListener {
-                // If the document doesn't exist, create it
-                docRef.document(userId).set(mapOf(field to 1), com.google.firebase.firestore.SetOptions.merge())
+                docRef.document(userId).set(mapOf(field to 1), SetOptions.merge())
             }
     }
 
-    override fun updateDiagramNodeFields(
+    override fun updateMapNodeFields(
         userId: String,
-        projectId: String,
+        collectionId: String,
+        mapId: String,
         nodeId: String,
         fields: Map<String, Any>
     ) {
-        if (userId.isEmpty() || projectId.isEmpty() || nodeId.isEmpty()) return
-        docRef.document(userId)
-            .collection(PROJECTS_COLLECTION)
-            .document(projectId)
-            .collection(NODES_COLLECTION)
+        if (userId.isEmpty() || mapId.isEmpty() || nodeId.isEmpty()) return
+        val path = if (collectionId.isEmpty()) {
+            docRef.document(userId)
+                .collection(MAPS_COLLECTION)
+                .document(mapId)
+        } else {
+            docRef.document(userId)
+                .collection(COLLECTION)
+                .document(collectionId)
+                .collection(MAPS_COLLECTION)
+                .document(mapId)
+        }
+        path.collection(NODES_COLLECTION)
             .document(nodeId)
             .update(fields)
-            .addOnSuccessListener {
-                Log.d(TAG, "SUCCESS: Updated partial fields for node $nodeId: $fields")
-            }
-            .addOnFailureListener {
-                Log.e(TAG, "FAILURE: Error updating partial fields for node $nodeId", it)
-            }
     }
+
+    override fun getAllCollections(userId: String) = docRef
+        .document(userId)
+        .collection(COLLECTION)
+        .dataObjects<ListCollection>()
 }

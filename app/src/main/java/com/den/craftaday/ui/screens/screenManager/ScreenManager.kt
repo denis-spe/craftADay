@@ -22,14 +22,15 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.den.craftaday.backend.states.AuthState
-import com.den.craftaday.backend.viewModels.DiagramViewModel
+import com.den.craftaday.backend.viewModels.MapViewModel
 import com.den.craftaday.backend.viewModels.HomeViewModel
 import com.den.craftaday.backend.viewModels.RegisterViewModel
 import com.den.craftaday.backend.viewModels.ScreenManagerViewModel
 import com.den.craftaday.backend.viewModels.SettingsViewModel
 import com.den.craftaday.backend.viewModels.WelcomeViewModel
-import com.den.craftaday.ui.screens.diagramScreen.DiagramScreen
+import com.den.craftaday.ui.screens.mapScreen.MapScreen
 import com.den.craftaday.ui.screens.homeScreen.HomeScreen
+import com.den.craftaday.ui.screens.homeScreen.CollectionDetailScreen
 import com.den.craftaday.ui.screens.loadingScreen.LoadingScreen
 import com.den.craftaday.ui.screens.loginScreen.LoginScreen
 import com.den.craftaday.ui.screens.registerScreen.EmailScreen
@@ -46,13 +47,6 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(
     // ===== Welcome Screen =====
     entry<WelcomeRouter>(
         metadata = metadata {
-//            put(NavDisplay.TransitionKey) {
-//                // Slide new content up, keeping the old content in place underneath
-//                slideInVertically(
-//                    initialOffsetY = { it },
-//                    animationSpec = tween(1000)
-//                ) togetherWith ExitTransition.KeepUntilTransitionsFinished
-//            }
             put(NavDisplay.PopTransitionKey) {
                 // Slide old content down, revealing the new content in place underneath
                 EnterTransition.None togetherWith
@@ -115,6 +109,16 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(
         )
     }
 
+    // ===== Collection Detail Screen =====
+    entry<CollectionDetailRouter> {
+        val homeViewModel: HomeViewModel = hiltViewModel()
+        CollectionDetailScreen(
+            collectionId = it.collectionId,
+            backStack = backStack,
+            homeViewModel = homeViewModel
+        )
+    }
+
     // ===== Settings Screen =====
     entry<SettingsRouter> {
         val settingsViewModel: SettingsViewModel = hiltViewModel()
@@ -124,12 +128,13 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(
         )
     }
 
-    // ===== Diagram Screen =====
-    entry<DiagramRouter> {
-        val diagramViewModel: DiagramViewModel = hiltViewModel()
-        DiagramScreen(
-            projectId = it.projectId,
-            viewModel = diagramViewModel
+    // ===== Map Screen =====
+    entry<MapRouter> {
+        val mapViewModel: MapViewModel = hiltViewModel()
+        MapScreen(
+            collectionId = it.collectionId,
+            mapId = it.mapId,
+            viewModel = mapViewModel
         )
     }
 }
@@ -151,7 +156,7 @@ fun ScreenManager() {
 
     // 3. Check if the user is logged in or not
     val isLogIn = remember(userState) {
-        when(val user = userState) {
+        when(userState) {
             AuthState.NotAuthenticated -> WelcomeRouter
             is AuthState.Authenticated -> HomeRouter
             is AuthState.Error -> WelcomeRouter
@@ -212,5 +217,3 @@ fun ScreenManager() {
         },
     )
 }
-
-

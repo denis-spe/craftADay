@@ -1,21 +1,16 @@
 // Bless be the name of LORD GOD
-package com.den.craftaday.ui.screens.diagramScreen.components
+package com.den.craftaday.ui.screens.mapScreen.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.GridOn
-import androidx.compose.material.icons.filled.HorizontalDistribute
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.Polyline
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Timeline
-import androidx.compose.material.icons.filled.VerticalAlignBottom
-import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,12 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.den.craftaday.backend.dataStructure.ConnectorType
 import com.den.craftaday.backend.dataStructure.LayoutType
-import com.den.craftaday.backend.viewModels.DiagramViewModel
+import com.den.craftaday.backend.viewModels.MapViewModel
 
 @Composable
-fun DiagramFloatingButton(
-    projectId: String,
-    viewModel: DiagramViewModel,
+fun MapFloatingButton(
+    mapId: String, // Kept for consistency
+    viewModel: MapViewModel,
     showLayoutSheet: MutableState<Boolean>,
     showConnectorSheet: MutableState<Boolean>,
     isCreatingRoot: MutableState<Boolean>,
@@ -51,7 +46,6 @@ fun DiagramFloatingButton(
         ) {
             IconButton(onClick = {
                 viewModel.autoLayoutTree(
-                    projectId,
                     currentLayoutType
                 ) }) {
                 Icon(Icons.Default.Refresh, contentDescription = "Reorganize Layout")
@@ -80,7 +74,7 @@ fun DiagramFloatingButton(
                 onClick = { isCreatingRoot.value = true },
                 shape = CircleShape,
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Root Node")
+                Icon(Icons.Default.Add, contentDescription = "Add Root MapNode")
             }
         }
     }

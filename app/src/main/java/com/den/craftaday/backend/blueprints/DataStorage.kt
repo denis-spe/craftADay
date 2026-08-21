@@ -1,7 +1,8 @@
 package com.den.craftaday.backend.blueprints
 
-import com.den.craftaday.backend.dataStructure.DiagramNode
-import com.den.craftaday.backend.dataStructure.DiagramProject
+import com.den.craftaday.backend.dataStructure.MapNode
+import com.den.craftaday.backend.dataStructure.ProjectMap
+import com.den.craftaday.backend.dataStructure.ListCollection
 import com.den.craftaday.backend.dataStructure.Task
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
@@ -15,69 +16,60 @@ interface DataStorage {
      */
     fun getAllDatasets(userId: String): Flow<List<Task>>
 
+    fun getTasksInCollection(userId: String, collectionId: String): Flow<List<Task>>
+
     /**
      * Add a task to the database
-     * @param userId The user's ID
-     * @param task The task to add
      */
-    fun addTask(userId: String, task: Task)
+    fun addTask(userId: String, collectionId: String, task: Task)
 
     /**
      * Delete a task from the database
-     * @param userId The user's ID
-     * @param task The task to delete
      */
-    fun deleteTask(userId: String, task: Task)
+    fun deleteTask(userId: String, collectionId: String, task: Task)
 
     /**
      * Update a task in the database
-     * @param userId The user's ID
-     * @param task The task to update
      */
-    fun updateTask(userId: String, task: Task)
+    fun updateTask(userId: String, collectionId: String, task: Task)
 
     /**
-     * Get all projects from the database
-     * @param userId The user's ID
-     * @param diagramProjectId The diagram project ID
-     * @return A flow of lists of projects
+     * Update node in map
      */
-    fun updateDiagramNode(userId: String, diagramProjectId: String, node: DiagramNode)
+    fun updateMapNode(userId: String, collectionId: String, mapId: String, node: MapNode)
 
     /**
-     * Delete node from project
-     * @param userId The user's ID
-     * @param diagramProjectId The diagram project ID
-     * @return A flow of lists of projects
+     * Delete node from map
      */
-    fun deleteDiagramNode(userId: String, diagramProjectId: String, nodeId: String)
+    fun deleteMapNode(userId: String, collectionId: String, mapId: String, nodeId: String)
 
     /**
-     * Add node to project
-     * @param userId The user's ID
-     * @param diagramProjectId The diagram project ID
-     * @return A flow of lists of projects
+     * Add node to map
      */
-    fun addDiagramNode(userId: String, diagramProjectId: String, node: DiagramNode)
+    fun addMapNode(userId: String, collectionId: String, mapId: String, node: MapNode)
 
     /**
-     * Get all diagram nodes from the database
-     * @param userId The user's ID
-     * @param diagramProjectId The diagram project ID
-     * @return A flow of lists of diagram nodes
+     * Get all map nodes from the database
      */
-    fun getDiagramNodes(userId: String, diagramProjectId: String): Flow<List<DiagramNode>>
+    fun getMapNodes(userId: String, collectionId: String, mapId: String): Flow<List<MapNode>>
 
     /**
-     * Get all projects from the database
-     * @param userId The user's ID
-     * @return A flow of lists of projects
+     * Get all maps from the database (deprecated/global)
      */
-    fun getAllProjects(userId: String): Flow<List<DiagramProject>>
-    fun addProject(userId: String, project: DiagramProject)
-    fun deleteProject(userId: String, project: DiagramProject)
-    fun updateProject(userId: String, project: DiagramProject)
-    fun getProject(userId: String, projectId: String): Flow<DiagramProject?>
+    fun getAllMaps(userId: String): Flow<List<ProjectMap>>
+    
+    fun getMapsInCollection(userId: String, collectionId: String): Flow<List<ProjectMap>>
+
+    fun addMap(userId: String, collectionId: String, map: ProjectMap)
+    fun deleteMap(userId: String, collectionId: String, map: ProjectMap)
+    fun updateMap(userId: String, collectionId: String, map: ProjectMap)
+    
+    fun getMap(userId: String, collectionId: String, mapId: String): Flow<ProjectMap?>
+
     fun incrementUserStats(userId: String, isSuccess: Boolean)
-    fun updateDiagramNodeFields(userId: String, projectId: String, nodeId: String, fields: Map<String, Any>)
+    
+    fun updateMapNodeFields(userId: String, collectionId: String, mapId: String, nodeId: String, fields: Map<String, Any>)
+    
+    fun addCollection(userId: String, collection: ListCollection)
+    fun getAllCollections(userId: String): Flow<List<ListCollection>>
 }

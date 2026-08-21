@@ -24,17 +24,18 @@
         tools:targetApi="33">
 
         <receiver
-            android:name=".backend.AlarmManager.AlarmReceiver"
+            android:name=".backend.alarmManager.AlarmReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.den.craftaday.ACTION_TASK_REMINDER" />
                 <action android:name="com.den.craftaday.ACTION_MARK_DONE" />
+                <action android:name="com.den.craftaday.ACTION_MARK_FAILED" />
             </intent-filter>
         </receiver>
 
         <receiver
-            android:name=".backend.AlarmManager.BootReceiver"
+            android:name=".backend.alarmManager.BootReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
