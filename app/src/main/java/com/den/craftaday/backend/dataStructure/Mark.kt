@@ -1,5 +1,6 @@
 package com.den.craftaday.backend.dataStructure
 
 enum class Mark {
-    Done, Field, Initial,
+    Done, Failed, Initial,
+    InProgress
 }

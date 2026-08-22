@@ -174,7 +174,16 @@ class AccountServiceRepo(
     override suspend fun handleGoogleSignIn(
         context: Context,
     ): Exception? {
-        val webClientId: String = context.getString(R.string.default_web_client_id)
+        val webClientId = try {
+            context.getString(R.string.default_web_client_id)
+        } catch (e: Exception) {
+            Log.e(TAG, "Google Client ID not found", e)
+            ""
+        }
+
+        if (webClientId.isEmpty()) {
+            return Exception("Google Sign-In is not configured correctly.")
+        }
 
         // For an explicit button flow, we use GetSignInWithGoogleOption which
         // shows the account picker with all accounts immediately.

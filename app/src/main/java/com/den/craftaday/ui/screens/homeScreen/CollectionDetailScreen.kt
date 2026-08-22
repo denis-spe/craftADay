@@ -3,6 +3,7 @@ package com.den.craftaday.ui.screens.homeScreen
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,8 +25,9 @@ import com.den.craftaday.backend.dataStructure.ProjectMap
 import com.den.craftaday.backend.dataStructure.Task
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.HomeViewModel
+import com.den.craftaday.ui.screens.homeScreen.mapList.MapList
+import com.den.craftaday.ui.screens.homeScreen.taskTab.TaskList
 import com.den.craftaday.ui.screens.screenManager.MapRouter
-import kotlinx.coroutines.flow.map
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,39 +36,22 @@ fun CollectionDetailScreen(
     backStack: NavBackStack<NavKey>,
     homeViewModel: HomeViewModel
 ) {
+    LaunchedEffect(collectionId) {
+        homeViewModel.setCollectionId(collectionId)
+    }
+
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Maps", "Tasks")
     var showAddDialog by remember { mutableStateOf(false) }
-    var newItemTitle by remember { mutableStateOf("") }
-    var newItemDescription by remember { mutableStateOf("") }
 
-    // Fetch data for this specific collection
-    val mapsState by remember(collectionId) {
-        homeViewModel.mapUseCase.getMapsInCollection(collectionId)
-            .map { DataState.Success(it) as DataState<List<ProjectMap>> }
-    }.collectAsStateWithLifecycle(DataState.Loading)
-
-    val tasksState by remember(collectionId) {
-        homeViewModel.taskUseCase.getTasksInCollection(collectionId)
-            .map { DataState.Success(it) as DataState<List<Task>> }
-    }.collectAsStateWithLifecycle(DataState.Loading)
+    val tasksState by homeViewModel.tasksInCollection.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
-            Column {
-                TopAppBar(
-                    title = { Text("Collection Details") },
-                )
-                TabRow(selectedTabIndex = selectedTab) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            text = { Text(title) }
-                        )
-                    }
-                }
-            }
+            CollectionTopAppBar(
+                backStack = backStack,
+                selectedTab = selectedTab,
+                onTabSelected = remember { { selectedTab = it } }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
@@ -75,148 +59,88 @@ fun CollectionDetailScreen(
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Box(modifier = Modifier
+            .padding(padding)
+            .fillMaxSize()) {
             when (selectedTab) {
-                0 -> MapList(mapsState) { mapId ->
+                0 -> TaskList(
+                    homeViewModel = homeViewModel,
+                    onMarkClick = remember(homeViewModel) { homeViewModel::onMarkClick }
+                )
+                1 -> MapList(homeViewModel) { mapId ->
                     backStack.add(MapRouter(collectionId, mapId))
                 }
-                1 -> TaskList(tasksState)
             }
         }
     }
 
     if (showAddDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text(if (selectedTab == 0) "New Map" else "New Task") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = newItemTitle,
-                        onValueChange = { newItemTitle = it },
-                        label = { Text("Title") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+        AddItemDialog(
+            isTask = selectedTab == 0,
+            onDismiss = { showAddDialog = false },
+            onConfirm = { title, description ->
+                if (selectedTab == 0) {
+                    homeViewModel.addTaskData(
+                        collectionId,
+                        Task(
+                            title = title,
+                            description = description,
+                            collectionId = collectionId
+                        )
                     )
-                    OutlinedTextField(
-                        value = newItemDescription,
-                        onValueChange = { newItemDescription = it },
-                        label = { Text("Description") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                } else {
+                    homeViewModel.addMap(collectionId, title, description)
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (newItemTitle.isNotBlank()) {
-                            if (selectedTab == 0) {
-                                homeViewModel.addMap(collectionId, newItemTitle, newItemDescription)
-                            } else {
-                                homeViewModel.addTaskData(collectionId, Task(title = newItemTitle, description = newItemDescription, collectionId = collectionId))
-                            }
-                            newItemTitle = ""
-                            newItemDescription = ""
-                            showAddDialog = false
-                        }
-                    }
-                ) {
-                    Text("Create")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel")
-                }
+                showAddDialog = false
             }
         )
     }
 }
 
 @Composable
-fun MapList(
-    state: DataState<List<ProjectMap>>,
-    onMapClick: (String) -> Unit
+fun AddItemDialog(
+    isTask: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        when (state) {
-            is DataState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            is DataState.Error -> Text("Error loading maps", modifier = Modifier.align(Alignment.Center))
-            is DataState.Success -> {
-                val maps = state.data
-                if (maps.isEmpty()) {
-                    Text("No maps in this collection.", modifier = Modifier.align(Alignment.Center))
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(maps) { map ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth().clickable { onMapClick(map.id) },
-                                shape = RoundedCornerShape(8.dp),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.Map, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(map.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                                    Spacer(modifier = Modifier.weight(1f))
-                                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+    var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
 
-@Composable
-fun TaskList(
-    state: DataState<List<Task>>
-) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        when (state) {
-            is DataState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            is DataState.Error -> Text("Error loading tasks", modifier = Modifier.align(Alignment.Center))
-            is DataState.Success -> {
-                val tasks = state.data
-                if (tasks.isEmpty()) {
-                    Text("No tasks in this collection.", modifier = Modifier.align(Alignment.Center))
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(tasks) { task ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.RadioButtonUnchecked, contentDescription = null, tint = Color.Gray)
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(task.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                                        if (task.description.isNotBlank()) {
-                                            Text(task.description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                                        }
-                                    }
-                                }
-                            }
-                        }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (isTask) "New Task" else "New Map") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (title.isNotBlank()) {
+                        onConfirm(title, description)
                     }
                 }
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
-    }
+    )
 }

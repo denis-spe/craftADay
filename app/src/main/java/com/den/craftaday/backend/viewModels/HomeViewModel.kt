@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.den.craftaday.backend.dataStructure.ProjectMap
 import com.den.craftaday.backend.dataStructure.Task
 import com.den.craftaday.backend.dataStructure.ListCollection
+import com.den.craftaday.backend.dataStructure.Mark
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.useCase.AuthorizationUseCase
@@ -13,6 +14,7 @@ import com.den.craftaday.backend.useCase.MapUseCase
 import com.den.craftaday.backend.useCase.TaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emptyFlow
@@ -30,6 +32,12 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         const val SUBSCRIBE_TIMEOUT = 5000L
+    }
+
+    private val _currentCollectionId = MutableStateFlow<String?>(null)
+
+    fun setCollectionId(id: String) {
+        _currentCollectionId.value = id
     }
 
     val fetchAllTasks = authorizationUseCase.userState
@@ -89,6 +97,35 @@ class HomeViewModel @Inject constructor(
             initialValue = DataState.Loading
         )
 
+    val mapsInCollection = _currentCollectionId
+        .flatMapLatest { id ->
+            if (id == null) return@flatMapLatest emptyFlow<DataState<List<ProjectMap>>>()
+            mapUseCase.getMapsInCollection(id)
+                .map { DataState.Success(it) as DataState<List<ProjectMap>> }
+                .catch { emit(DataState.Error(it)) }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT),
+            initialValue = DataState.Loading
+        )
+
+    val tasksInCollection = _currentCollectionId
+        .flatMapLatest { id ->
+            if (id == null) return@flatMapLatest emptyFlow<DataState<List<Task>>>()
+            taskUseCase.getTasksInCollection(id)
+                .map { DataState.Success(it) as DataState<List<Task>> }
+                .catch { emit(DataState.Error(it)) }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT),
+            initialValue = DataState.Loading
+        )
+
+    fun onMarkClick(task: Task) {
+        taskUseCase.updateTask(task.collectionId, task)
+    }
     fun addMap(collectionId: String, title: String, description: String) =
         mapUseCase.addMap(collectionId, ProjectMap(title = title, description = description))
 
