@@ -1,170 +1,301 @@
 // Bless be to name of LORD GOD of hosts
 package com.den.craftaday.ui.screens.homeScreen
 
-import androidx.compose.foundation.clickable
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.AddTask
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.FilterAltOff
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LibraryAdd
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
-import com.den.craftaday.backend.dataStructure.ListCollection
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.HomeViewModel
-import com.den.craftaday.ui.screens.screenManager.CollectionDetailRouter
+import java.time.LocalDate
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     backStack: NavBackStack<NavKey>,
     homeViewModel: HomeViewModel
 ) {
+    val localDateState = remember { mutableStateOf(LocalDate.now()) }
     val collectionsState by homeViewModel.fetchAllCollections.collectAsStateWithLifecycle()
-    var showAddDialog by remember { mutableStateOf(false) }
-    var newCollectionName by remember { mutableStateOf("") }
+    val selectedTabState = remember { mutableIntStateOf(0) }
+    val collectionIdState = remember { mutableStateOf("") }
+    val selectedTaskOrMapState = remember { mutableIntStateOf(0) }
+    val selectedDayState = remember { mutableIntStateOf(localDateState.value.dayOfMonth) }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("My Collections", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            HomeTopCenterBar(
+                day = selectedDayState.intValue
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Collection")
-            }
+        bottomBar = {
+            HomeBottomNavigation(
+                selectedTab = selectedTaskOrMapState.intValue,
+                onTaskBtnClick = {
+                    selectedTaskOrMapState.intValue = 0
+                },
+                onMapBtnClick = {
+                    selectedTaskOrMapState.intValue = 1
+                },
+                onAddBtnClick = {
+
+                }
+            )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
             when (val state = collectionsState) {
                 is DataState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    LoadingCollectionList()
                 }
+
                 is DataState.Error -> {
-                    Text(
-                        text = "Error: ${state.exception.message}",
-                        color = Color.Red,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    ErrorCollectionList(state)
                 }
+
                 is DataState.Success -> {
                     val collections = state.data
                     if (collections.isEmpty()) {
-                        Text(
-                            text = "No collections yet. Create your first one!",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
+                        EmptyCollectionList()
                     } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Top,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            items(collections) { collection ->
-                                CollectionItem(
-                                    collection = collection,
-                                    onClick = {
-                                        backStack.add(CollectionDetailRouter(collection.id))
-                                    }
-                                )
+                            collectionIdState.value = state.data[selectedTabState.intValue].id
+
+                            CollectionsList(
+                                collections,
+                                selectedTab = selectedTabState.intValue,
+                            ) { selectedTab, collectionId ->
+                                selectedTabState.intValue = selectedTab
+                                collectionIdState.value = collectionId
                             }
+
+                            TaskAndMapList(
+                                collectionId = state.data[selectedTabState.intValue].id,
+                                backStack = backStack,
+                                homeViewModel = homeViewModel,
+                                selectedTab = selectedTaskOrMapState.intValue
+                            )
                         }
                     }
                 }
             }
         }
-    }
-
-    if (showAddDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("New Collection") },
-            text = {
-                OutlinedTextField(
-                    value = newCollectionName,
-                    onValueChange = { newCollectionName = it },
-                    label = { Text("Collection Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (newCollectionName.isNotBlank()) {
-                            homeViewModel.addCollection(newCollectionName)
-                            newCollectionName = ""
-                            showAddDialog = false
-                        }
-                    }
-                ) {
-                    Text("Create")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 
 @Composable
-fun CollectionItem(
-    collection: ListCollection,
-    onClick: () -> Unit
+fun HomeBottomNavigation(
+    selectedTab: Int = 0,
+    onHomeBtnClick: () -> Unit = {},
+    onMapBtnClick: () -> Unit = {},
+    onTaskBtnClick: () -> Unit = {},
+    onAddBtnClick: () -> Unit = {}
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    val iconSize = 33.dp
+    val padding = 6.dp
+
+    BottomAppBar(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground
     ) {
         Row(
-            modifier = Modifier
-                .padding(20.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Folder,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = collection.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                // We could add map count/task count here if we fetch it
+
+            OutlinedCard(
+                modifier = Modifier,
+                shape = CircleShape,
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = CardDefaults.outlinedCardBorder(enabled = false),
+                onClick = onHomeBtnClick
+            ) {
+                Box(
+                    modifier = Modifier.padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = null,
+                        modifier = Modifier.size(iconSize),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Color.Gray
-            )
+
+            Spacer(modifier = Modifier.width(5.dp))
+
+            OutlinedCard(
+                modifier = Modifier,
+                shape = CircleShape,
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = CardDefaults.outlinedCardBorder(enabled = false)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(padding),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    IconButton(
+                        onClick = onTaskBtnClick
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TaskAlt,
+                            contentDescription = null,
+                            tint = if (selectedTab == 0) MaterialTheme.colorScheme.primary
+                            else Color.LightGray,
+                            modifier = Modifier.size(iconSize)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onMapBtnClick
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Map,
+                            contentDescription = null,
+                            tint = if (selectedTab == 1)
+                                MaterialTheme.colorScheme.primary
+                            else Color.LightGray,
+                            modifier = Modifier.size(iconSize)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(5.dp))
+
+            OutlinedCard(
+                modifier = Modifier,
+                shape = CircleShape,
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = CardDefaults.outlinedCardBorder(enabled = false),
+                onClick = onAddBtnClick
+            ) {
+                Box(
+                    modifier = Modifier.padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (selectedTab == 0)
+                            Icons.Default.AddTask
+                        else Icons.Default.LibraryAdd,
+                        contentDescription = null,
+                        modifier = Modifier.size(iconSize),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeTopCenterBar(day: Int) {
+    TopAppBar(
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                val color = MaterialTheme.colorScheme.primary
+                val iconSize = 30.dp
+
+                IconButton(
+                    onClick = {},
+                    shape = CircleShape
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarToday,
+                            contentDescription = "menu",
+                            tint = color,
+                            modifier = Modifier.size(iconSize)
+                        )
+
+                        Text(
+                            text = day.toString(),
+                            color = color,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.align(Alignment.BottomCenter)
+                                .padding(bottom = 2.dp)
+                        )
+                    }
+                }
+                Text(
+                    "Today",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            }
+        },
+
+        navigationIcon = {
+
+        },
+
+        actions = {
+            Row(
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {},
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                        contentDescription = "sort"
+                    )
+                }
+                IconButton(
+                    onClick = {}
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FilterAltOff,
+                        contentDescription = "filter"
+                    )
+                }
+            }
+        }
+    )
 }

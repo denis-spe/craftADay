@@ -30,7 +30,7 @@ import com.den.craftaday.backend.viewModels.SettingsViewModel
 import com.den.craftaday.backend.viewModels.WelcomeViewModel
 import com.den.craftaday.ui.screens.mapScreen.MapScreen
 import com.den.craftaday.ui.screens.homeScreen.HomeScreen
-import com.den.craftaday.ui.screens.homeScreen.CollectionDetailScreen
+import com.den.craftaday.ui.screens.homeScreen.TaskAndMapList
 import com.den.craftaday.ui.screens.loadingScreen.LoadingScreen
 import com.den.craftaday.ui.screens.loginScreen.LoginScreen
 import com.den.craftaday.ui.screens.registerScreen.EmailScreen
@@ -104,16 +104,6 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(
     entry<HomeRouter> {
         val homeViewModel: HomeViewModel = hiltViewModel()
         HomeScreen(
-            backStack = backStack,
-            homeViewModel = homeViewModel
-        )
-    }
-
-    // ===== Collection Detail Screen =====
-    entry<CollectionDetailRouter> {
-        val homeViewModel: HomeViewModel = hiltViewModel()
-        CollectionDetailScreen(
-            collectionId = it.collectionId,
             backStack = backStack,
             homeViewModel = homeViewModel
         )

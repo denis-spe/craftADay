@@ -10,6 +10,7 @@ import com.den.craftaday.backend.dataStructure.Mark
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.useCase.AuthorizationUseCase
+import com.den.craftaday.backend.useCase.DataFetchUseCase
 import com.den.craftaday.backend.useCase.MapUseCase
 import com.den.craftaday.backend.useCase.TaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,116 +29,111 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     val authorizationUseCase: AuthorizationUseCase,
     val taskUseCase: TaskUseCase,
-    val mapUseCase: MapUseCase
+    val mapUseCase: MapUseCase,
+    val dataFetchUseCase: DataFetchUseCase,
 ) : ViewModel() {
     companion object {
         const val SUBSCRIBE_TIMEOUT = 5000L
     }
 
-    private val _currentCollectionId = MutableStateFlow<String?>(null)
+    /**
+     * Set the collection id
+     * @param id of the collection
+     */
+    fun setCollectionId(id: String) = dataFetchUseCase.setCollectionId(id)
 
-    fun setCollectionId(id: String) {
-        _currentCollectionId.value = id
-    }
+    // ========================= Fetching all data from the fire store ============================
 
-    val fetchAllTasks = authorizationUseCase.userState
-        .flatMapLatest { authState ->
-            if (authState is AuthState.Authenticated) {
-                taskUseCase.getAllTasks().map<List<Task>, DataState<List<Task>>> { tasks ->
-                    DataState.Success(tasks)
-                }
-                    .catch { exception ->
-                        emit(DataState.Error(exception))
-                    }
-            } else {
-                emptyFlow()
-            }
-        }
+    /**
+     * Fetch all the collections
+     */
+    val fetchAllCollections = dataFetchUseCase.fetchAllCollections
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT),
             initialValue = DataState.Loading
         )
 
-    val fetchAllMaps = authorizationUseCase.userState
-        .flatMapLatest { authState ->
-            if (authState is AuthState.Authenticated) {
-                mapUseCase.getAllMaps().map<List<ProjectMap>, DataState<List<ProjectMap>>> { maps ->
-                    DataState.Success(maps)
-                }
-                    .catch { exception ->
-                        emit(DataState.Error(exception))
-                    }
-            } else {
-                emptyFlow()
-            }
-        }
+    /**
+     * Fetch all the maps in a collection
+     */
+    val mapsInCollection = dataFetchUseCase.mapsInCollection
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT),
             initialValue = DataState.Loading
         )
 
-    val fetchAllCollections = authorizationUseCase.userState
-        .flatMapLatest { authState ->
-            if (authState is AuthState.Authenticated) {
-                mapUseCase.getAllCollections().map<List<ListCollection>, DataState<List<ListCollection>>> { collections ->
-                    DataState.Success(collections)
-                }
-                    .catch { exception ->
-                        emit(DataState.Error(exception))
-                    }
-            } else {
-                emptyFlow()
-            }
-        }
+    /**
+     * Fetch all the tasks in a collection
+     */
+    val tasksInCollection = dataFetchUseCase.tasksInCollection
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT),
             initialValue = DataState.Loading
         )
 
-    val mapsInCollection = _currentCollectionId
-        .flatMapLatest { id ->
-            if (id == null) return@flatMapLatest emptyFlow<DataState<List<ProjectMap>>>()
-            mapUseCase.getMapsInCollection(id)
-                .map { DataState.Success(it) as DataState<List<ProjectMap>> }
-                .catch { emit(DataState.Error(it)) }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT),
-            initialValue = DataState.Loading
-        )
-
-    val tasksInCollection = _currentCollectionId
-        .flatMapLatest { id ->
-            if (id == null) return@flatMapLatest emptyFlow<DataState<List<Task>>>()
-            taskUseCase.getTasksInCollection(id)
-                .map { DataState.Success(it) as DataState<List<Task>> }
-                .catch { emit(DataState.Error(it)) }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(SUBSCRIBE_TIMEOUT),
-            initialValue = DataState.Loading
-        )
-
+    // ============================== Data update from fire store ======================
+    /**
+     * Update the task mark
+     * @param task The task to update
+     */
     fun onMarkClick(task: Task) {
         taskUseCase.updateTask(task.collectionId, task)
     }
+
+
+    /**
+     * Update a task in a collection
+     * @param collectionId of the collection
+     * @param task to update
+     */
+    fun updateTask(collectionId: String, task: Task) = taskUseCase.updateTask(collectionId, task)
+
+    /**
+     * Update a map in a collection
+     * @param collectionId of the collection
+     * @param map to update
+     */
+    fun updateMap(collectionId: String, map: ProjectMap) = mapUseCase.updateMap(collectionId, map)
+
+    // ============================ Adding Data to fire store ==========================
+    /**
+     * Add a map to a collection
+     * @param collectionId of the collection
+     * @param title of the map
+     * @param description of the map
+     */
     fun addMap(collectionId: String, title: String, description: String) =
         mapUseCase.addMap(collectionId, ProjectMap(title = title, description = description))
 
-    fun deleteMap(collectionId: String, map: ProjectMap) = mapUseCase.deleteMap(collectionId, map)
-
-    fun updateMap(collectionId: String, map: ProjectMap) = mapUseCase.updateMap(collectionId, map)
-
+    /**
+     * Add a task to a collection
+     * @param collectionId of the collection
+     * @param task to add
+     */
     fun addTaskData(collectionId: String, task: Task) = taskUseCase.addTask(collectionId, task)
 
-    fun deleteTask(collectionId: String, task: Task) = taskUseCase.deleteTask(collectionId, task)
-
-    fun updateTask(collectionId: String, task: Task) = taskUseCase.updateTask(collectionId, task)
-    
+    /**
+     * Add a collection to the user
+     * @param name of the collection
+     */
     fun addCollection(name: String) = mapUseCase.addCollection(ListCollection(name = name))
+
+    //  ============================= Deleting Data from fire store =====================
+
+    /**
+     * Delete a map from a collection
+     * @param collectionId of the collection
+     * @param map to delete
+     */
+    fun deleteMap(collectionId: String, map: ProjectMap) = mapUseCase.deleteMap(collectionId, map)
+
+    /**
+     * Delete a task from a collection
+     * @param collectionId of the collection
+     * @param task to delete
+     */
+    fun deleteTask(collectionId: String, task: Task) = taskUseCase.deleteTask(collectionId, task)
 }
