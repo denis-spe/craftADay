@@ -13,7 +13,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -37,12 +40,18 @@ import com.den.craftaday.ui.screens.screenManager.CollectionDetailRouter
 fun CollectionsList(
     collections: List<ListCollection>,
     selectedTab: Int,
+    onAddCollection: () -> Unit,
     onTabSelected: (selectedTab: Int, collectionId: String) -> Unit
 ) {
     LazyRow (
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        stickyHeader {
+            AddCollection(
+                onClick = onAddCollection
+            )
+        }
         items(collections.size) { index ->
             val collection = collections[index]
 
@@ -92,6 +101,43 @@ fun CollectionItem(
             Text(
                 text = collection.name,
                 style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun AddCollection(
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground
+        ),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                contentDescription = null,
+                modifier = Modifier.size(25.dp)
+            )
+
+            Text(
+                text = "collection",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
         }

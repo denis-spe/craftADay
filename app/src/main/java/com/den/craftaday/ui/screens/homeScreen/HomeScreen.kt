@@ -27,8 +27,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
+import com.den.craftaday.backend.dataStructure.Task
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.HomeViewModel
+import com.den.craftaday.ui.screens.components.AddMapDialog
+import com.den.craftaday.ui.screens.components.AddTaskDialog
 import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -44,6 +47,9 @@ fun HomeScreen(
     val collectionIdState = remember { mutableStateOf("") }
     val selectedTaskOrMapState = remember { mutableIntStateOf(0) }
     val selectedDayState = remember { mutableIntStateOf(localDateState.value.dayOfMonth) }
+    val showTaskDialogState = remember { mutableStateOf(false) }
+    val showMapDialogState = remember { mutableStateOf(false) }
+
 
     Scaffold(
         topBar = {
@@ -61,7 +67,11 @@ fun HomeScreen(
                     selectedTaskOrMapState.intValue = 1
                 },
                 onAddBtnClick = {
-
+                    if (selectedTaskOrMapState.intValue == 0) {
+                        showTaskDialogState.value = true
+                    } else {
+                        showMapDialogState.value = true
+                    }
                 }
             )
         }
@@ -96,6 +106,9 @@ fun HomeScreen(
                             CollectionsList(
                                 collections,
                                 selectedTab = selectedTabState.intValue,
+                                onAddCollection = {
+
+                                }
                             ) { selectedTab, collectionId ->
                                 selectedTabState.intValue = selectedTab
                                 collectionIdState.value = collectionId
@@ -112,6 +125,38 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    if (showTaskDialogState.value) {
+        AddTaskDialog(
+            onDismiss = { showTaskDialogState.value = false },
+            onConfirm = { title, description ->
+                homeViewModel.addTaskData (
+                    collectionIdState.value,
+                    task = Task(
+                        collectionId = collectionIdState.value,
+                        title = title,
+                        description = description
+                    )
+                )
+                showTaskDialogState.value = false
+            }
+        )
+    }
+
+    if (showMapDialogState.value) {
+        AddMapDialog(
+            onDismiss = { showMapDialogState.value = false },
+            onConfirm = { title, description ->
+                homeViewModel.addMap(
+                    collectionIdState.value,
+                    title,
+                    description
+                )
+
+                showMapDialogState.value = false
+            }
+        )
     }
 }
 
@@ -177,7 +222,7 @@ fun HomeBottomNavigation(
                             imageVector = Icons.Default.TaskAlt,
                             contentDescription = null,
                             tint = if (selectedTab == 0) MaterialTheme.colorScheme.primary
-                            else Color.LightGray,
+                            else MaterialTheme.colorScheme.primary.copy(0.3f),
                             modifier = Modifier.size(iconSize)
                         )
                     }
@@ -190,7 +235,7 @@ fun HomeBottomNavigation(
                             contentDescription = null,
                             tint = if (selectedTab == 1)
                                 MaterialTheme.colorScheme.primary
-                            else Color.LightGray,
+                            else MaterialTheme.colorScheme.primary.copy(0.3f),
                             modifier = Modifier.size(iconSize)
                         )
                     }
