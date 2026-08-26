@@ -19,9 +19,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.den.craftaday.backend.dataStructure.ConnectorType
-import com.den.craftaday.backend.dataStructure.LayoutType
+import com.den.craftaday.backend.entities.types.ConnectorType
+import com.den.craftaday.backend.entities.types.LayoutType
 import com.den.craftaday.backend.viewModels.MapViewModel
 
 @Composable
@@ -74,7 +76,11 @@ fun MapFloatingButton(
                 onClick = { isCreatingRoot.value = true },
                 shape = CircleShape,
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Root MapNode")
+                Icon(
+                    painter = painterResource(id = com.den.craftaday.R.drawable.ic_plus_3d),
+                    contentDescription = "Add Root MapNodeEntity",
+                    tint = Color.Unspecified
+                )
             }
         }
     }

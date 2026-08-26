@@ -27,7 +27,7 @@ class AndroidApplication : Application(), Configuration.Provider {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Task Reminders"
+            val name = "TaskEntity Reminders"
             val descriptionText = "Notifications for project task deadlines"
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel("task_reminders", name, importance).apply {

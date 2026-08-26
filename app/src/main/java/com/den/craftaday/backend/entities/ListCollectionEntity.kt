@@ -1,9 +1,9 @@
-package com.den.craftaday.backend.dataStructure
+package com.den.craftaday.backend.entities
 
 import androidx.compose.runtime.Immutable
 
 @Immutable
-data class ListCollection(
+data class ListCollectionEntity(
     val id: String = "",
     val name: String = "",
     val createdAt: Long = 0L,

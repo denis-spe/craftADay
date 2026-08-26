@@ -5,8 +5,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.den.craftaday.backend.blueprints.DataStorage
-import com.den.craftaday.backend.blueprints.AccountService
+import com.den.craftaday.backend.repositories.services.DataStorageService
+import com.den.craftaday.backend.repositories.services.AccountService
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
@@ -16,7 +16,7 @@ import javax.inject.Inject
 class BootReceiver : BroadcastReceiver() {
 
     @Inject
-    lateinit var dataStorage: DataStorage
+    lateinit var dataStorageService: DataStorageService
 
     @Inject
     lateinit var accountService: AccountService
@@ -40,15 +40,15 @@ class BootReceiver : BroadcastReceiver() {
             scope.launch {
                 try {
                     // 1. Check old structure maps (projects collection)
-                    val oldMaps = dataStorage.getAllMaps(userId).first()
+                    val oldMaps = dataStorageService.getAllMaps(userId).first()
                     oldMaps.forEach { map ->
                         processMapNodes(collectionId = "", mapId = map.id, mapTitle = map.title)
                     }
 
                     // 2. Check new structure (collections)
-                    val collections = dataStorage.getAllCollections(userId).first()
+                    val collections = dataStorageService.getAllCollections(userId).first()
                     collections.forEach { collection ->
-                        val maps = dataStorage.getMapsInCollection(userId, collection.id).first()
+                        val maps = dataStorageService.getMapsInCollection(userId, collection.id).first()
                         maps.forEach { map ->
                             processMapNodes(collectionId = collection.id, mapId = map.id, mapTitle = map.title)
                         }
@@ -64,7 +64,7 @@ class BootReceiver : BroadcastReceiver() {
 
     private suspend fun processMapNodes(collectionId: String, mapId: String, mapTitle: String) {
         val userId = accountService.currentUserId
-        val nodes = dataStorage.getMapNodes(userId, collectionId, mapId).first()
+        val nodes = dataStorageService.getMapNodes(userId, collectionId, mapId).first()
         nodes.forEach { node ->
             if (node.status != "COMPLETED" && 
                 node.remainder != null && 

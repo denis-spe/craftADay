@@ -3,21 +3,21 @@ package com.den.craftaday.backend.repositories
 
 import android.util.Log
 import com.den.craftaday.R
-import com.den.craftaday.backend.dataStructure.MapNode
-import com.den.craftaday.backend.dataStructure.Task
-import com.den.craftaday.backend.blueprints.DataStorage
-import com.den.craftaday.backend.dataStructure.ProjectMap
-import com.den.craftaday.backend.dataStructure.ListCollection
-import com.den.craftaday.backend.dataStructure.Mark
-import com.den.craftaday.backend.dataStructure.Reset
+import com.den.craftaday.backend.entities.MapNodeEntity
+import com.den.craftaday.backend.entities.TaskEntity
+import com.den.craftaday.backend.repositories.services.DataStorageService
+import com.den.craftaday.backend.entities.MapEntity
+import com.den.craftaday.backend.entities.ListCollectionEntity
+import com.den.craftaday.backend.entities.types.MarkType
+import com.den.craftaday.backend.entities.types.TaskAlarmType
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.*
 import com.google.firebase.firestore.dataObjects
 import kotlinx.coroutines.flow.map
 
-class DataStorageRepo(
+class DataStorageServiceRepo(
     override val firestore: FirebaseFirestore
-): DataStorage {
+): DataStorageService {
     companion object {
         const val DATASET_COLLECTION = "craftADayDataset"
         const val TASKS_COLLECTION = "tasks"
@@ -25,7 +25,7 @@ class DataStorageRepo(
         const val NODES_COLLECTION = "nodes"
         const val COLLECTION = "collection"
 
-        const val TAG = "DataStorageRepo"
+        const val TAG = "DataStorageServiceRepo"
     }
 
     private val docRef = firestore
@@ -55,37 +55,36 @@ class DataStorageRepo(
             }
         }
 
-    private fun DocumentSnapshot.toTask(): Task? {
+    private fun DocumentSnapshot.toTask(): TaskEntity? {
         return try {
-            val markStr = getString("mark") ?: Mark.Initial.name
-            val mark = try {
-                Mark.valueOf(markStr)
+            val markTypeStr = getString("markType") ?: MarkType.Initial.name
+            val markType = try {
+                MarkType.valueOf(markTypeStr)
             } catch (_: IllegalArgumentException) {
                 // Handle case-insensitivity or legacy names
-                Mark.entries.find { it.name.equals(markStr, ignoreCase = true) } ?: Mark.Initial
+                MarkType.entries.find { it.name.equals(markTypeStr, ignoreCase = true) } ?: MarkType.Initial
             }
 
-            Task(
+            TaskEntity(
                 id = id,
                 collectionId = getString("collectionId") ?: "",
                 title = getString("title") ?: "",
                 description = getString("description") ?: "",
                 createdAt = getLongSafe("createdAt") ?: System.currentTimeMillis(),
                 remainder = getLongSafe("remainder") ?: 0L,
-                mark = mark,
-                startedAt = getLongSafe("startedAt") ?: System.currentTimeMillis(),
+                markType = markType,
                 chosenIcon = getLongSafe("chosenIcon")?.toInt()?.takeIf { it != 0 } ?: R.drawable.ic_launcher_foreground,
-                onReset = Reset.fromMap(get("onReset") as? Map<*, *> ?: emptyMap<String, Any>())
+                taskAlarmType = TaskAlarmType.fromMap(get("taskAlarmType") as? Map<*, *> ?: emptyMap<String, Any>())
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Error mapping document $id to Task", e)
+            Log.e(TAG, "Error mapping document $id to TaskEntity", e)
             null
         }
     }
 
     override fun addCollection(
         userId: String,
-        collection: ListCollection
+        collection: ListCollectionEntity
     ) {
         val collectionRef = docRef.document(userId)
             .collection(COLLECTION)
@@ -98,7 +97,7 @@ class DataStorageRepo(
     override fun addTask(
         userId: String,
         collectionId: String,
-        task: Task
+        taskEntity: TaskEntity
     ) {
          val taskRef = docRef.document(userId)
              .collection(COLLECTION)
@@ -106,45 +105,45 @@ class DataStorageRepo(
             .collection(TASKS_COLLECTION)
              .document()
 
-        val taskCopy = task.copy(id = taskRef.id)
+        val taskCopy = taskEntity.copy(id = taskRef.id)
         taskRef.set(taskCopy.toMap)
             .addOnSuccessListener {
-                Log.w(TAG, "Task added successfully to collection $collectionId")
+                Log.w(TAG, "TaskEntity added successfully to collection $collectionId")
             }
             .addOnFailureListener {
-                Log.e(TAG, "Error adding task: $it")
+                Log.e(TAG, "Error adding taskEntity: $it")
             }
     }
 
     override fun deleteTask(
         userId: String,
         collectionId: String,
-        task: Task
+        taskEntity: TaskEntity
     ) {
         docRef.document(userId)
             .collection(COLLECTION)
             .document(collectionId)
             .collection(TASKS_COLLECTION)
-            .document(task.id)
+            .document(taskEntity.id)
             .delete()
     }
 
     override fun updateTask(
         userId: String,
         collectionId: String,
-        task: Task
+        taskEntity: TaskEntity
     ) {
         docRef.document(userId)
             .collection(COLLECTION)
             .document(collectionId)
             .collection(TASKS_COLLECTION)
-            .document(task.id)
-            .set(task.toMap)
+            .document(taskEntity.id)
+            .set(taskEntity.toMap)
             .addOnSuccessListener {
-                Log.w(TAG, "Task updated successfully in collection $collectionId")
+                Log.w(TAG, "TaskEntity updated successfully in collection $collectionId")
             }
             .addOnFailureListener {
-                Log.e(TAG, "Error updating task: $it")
+                Log.e(TAG, "Error updating taskEntity: $it")
             }
     }
 
@@ -158,10 +157,10 @@ class DataStorageRepo(
         .document(collectionId)
         .collection(MAPS_COLLECTION)
         .whereEqualTo(FieldPath.documentId(), mapId)
-        .dataObjects<ProjectMap>()
+        .dataObjects<MapEntity>()
         .map { it.firstOrNull() }
 
-    override fun addMap(userId: String, collectionId: String, map: ProjectMap) {
+    override fun addMap(userId: String, collectionId: String, map: MapEntity) {
         docRef.document(userId)
             .collection(COLLECTION)
             .document(collectionId)
@@ -169,7 +168,7 @@ class DataStorageRepo(
             .add(map)
     }
 
-    override fun deleteMap(userId: String, collectionId: String, map: ProjectMap) {
+    override fun deleteMap(userId: String, collectionId: String, map: MapEntity) {
         docRef.document(userId)
             .collection(COLLECTION)
             .document(collectionId)
@@ -179,7 +178,7 @@ class DataStorageRepo(
     }
 
 
-    override fun updateMap(userId: String, collectionId: String, map: ProjectMap) {
+    override fun updateMap(userId: String, collectionId: String, map: MapEntity) {
         docRef.document(userId)
             .collection(COLLECTION)
             .document(collectionId)
@@ -192,20 +191,20 @@ class DataStorageRepo(
     override fun getAllMaps(userId: String) = docRef
         .document(userId)
         .collection(MAPS_COLLECTION)
-        .dataObjects<ProjectMap>()
+        .dataObjects<MapEntity>()
 
     override fun getMapsInCollection(userId: String, collectionId: String) = docRef
         .document(userId)
         .collection(COLLECTION)
         .document(collectionId)
         .collection(MAPS_COLLECTION)
-        .dataObjects<ProjectMap>()
+        .dataObjects<MapEntity>()
 
     override fun getMapNodes(
         userId: String,
         collectionId: String,
         mapId: String,
-    ): kotlinx.coroutines.flow.Flow<List<MapNode>> {
+    ): kotlinx.coroutines.flow.Flow<List<MapNodeEntity>> {
         val path = if (collectionId.isEmpty()) {
             // Root path for old maps
             docRef.document(userId)
@@ -219,14 +218,14 @@ class DataStorageRepo(
                 .collection(MAPS_COLLECTION)
                 .document(mapId)
         }
-        return path.collection(NODES_COLLECTION).dataObjects<MapNode>()
+        return path.collection(NODES_COLLECTION).dataObjects<MapNodeEntity>()
     }
 
     override fun addMapNode(
         userId: String,
         collectionId: String,
         mapId: String,
-        node: MapNode
+        node: MapNodeEntity
     ) {
         if (userId.isEmpty()) return
         
@@ -280,7 +279,7 @@ class DataStorageRepo(
         userId: String,
         collectionId: String,
         mapId: String,
-        node: MapNode
+        node: MapNodeEntity
     ) {
         if (userId.isEmpty() || node.id.isEmpty()) return
         val path = if (collectionId.isEmpty()) {
@@ -343,15 +342,15 @@ class DataStorageRepo(
             }
         }
 
-    private fun DocumentSnapshot.toListCollection(): ListCollection? {
+    private fun DocumentSnapshot.toListCollection(): ListCollectionEntity? {
         return try {
-            ListCollection(
+            ListCollectionEntity(
                 id = id,
                 name = getString("name") ?: "",
                 createdAt = getLongSafe("createdAt") ?: 0L
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Error mapping document $id to ListCollection", e)
+            Log.e(TAG, "Error mapping document $id to ListCollectionEntity", e)
             null
         }
     }

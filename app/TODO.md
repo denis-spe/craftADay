@@ -1,5 +1,5 @@
 # **CraftADay**
-Android jetpack compose application for setting daily, weekly monthly, yearly task
+Android jetpack compose application for setting daily, weekly monthly, yearly taskEntity
 And planning of project
 
 ## **Day 1**

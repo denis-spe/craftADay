@@ -1,16 +1,15 @@
 // Great id the LORD GOD of hosts
 package com.den.craftaday
 
-import com.den.craftaday.backend.blueprints.AccountService
-import com.den.craftaday.backend.blueprints.DataStorage
+import com.den.craftaday.backend.repositories.services.AccountService
+import com.den.craftaday.backend.repositories.services.DataStorageService
 import com.den.craftaday.backend.repositories.AccountServiceRepo
-import com.den.craftaday.backend.repositories.DataStorageRepo
+import com.den.craftaday.backend.repositories.DataStorageServiceRepo
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.LocalCacheSettings
 import com.google.firebase.firestore.PersistentCacheSettings
-import com.google.firebase.firestore.MemoryCacheSettings
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -63,8 +62,8 @@ object FirebaseModule {
 
     @Singleton
     @Provides
-    fun provideDataStorage(firestore: FirebaseFirestore): DataStorage {
-        return DataStorageRepo(firestore)
+    fun provideDataStorage(firestore: FirebaseFirestore): DataStorageService {
+        return DataStorageServiceRepo(firestore)
     }
 
     @Singleton

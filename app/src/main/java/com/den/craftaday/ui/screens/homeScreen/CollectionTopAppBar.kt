@@ -58,7 +58,7 @@ fun CollectionTopAppBar(
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TabItem("Task", isSelected = selectedTab == 0) { onTabSelected(0) }
+                        TabItem("TaskEntity", isSelected = selectedTab == 0) { onTabSelected(0) }
                         TabItem("Map", isSelected = selectedTab == 1) { onTabSelected(1) }
                     }
                 }

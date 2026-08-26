@@ -49,7 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.den.craftaday.backend.dataStructure.MapNode
+import com.den.craftaday.backend.entities.MapNodeEntity
 import com.google.firebase.Timestamp
 import androidx.core.graphics.toColorInt
 import java.text.SimpleDateFormat
@@ -77,7 +77,7 @@ val REPEAT_OPTIONS = listOf("NONE", "DAILY", "WEEKLY", "MONTHLY")
 
 @Composable
 fun EditTaskNodeDialog(
-    node: MapNode?,
+    node: MapNodeEntity?,
     isCreatingRoot: Boolean = false,
     isCreatingChild: Boolean = false,
     initialColor: String? = null,
@@ -144,8 +144,8 @@ fun EditTaskNodeDialog(
 
     val dialogTitle = when {
         isCreatingRoot -> "Add Root Map Node"
-        isCreatingChild -> "Add Child Task Node"
-        else -> "Edit Task Node"
+        isCreatingChild -> "Add Child TaskEntity Node"
+        else -> "Edit TaskEntity Node"
     }
 
     AlertDialog(
@@ -164,7 +164,7 @@ fun EditTaskNodeDialog(
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("Task Title") },
+                        label = { Text("TaskEntity Title") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -279,7 +279,7 @@ fun EditTaskNodeDialog(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = remainder?.let { dateFormatter.format(it.toDate()) } ?: "No reminder set",
+                                text = remainder?.let { dateFormatter.format(it.toDate()) } ?: "SpecificWeekDay reminder set",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = if (remainder != null) MaterialTheme.colorScheme.onSurface else Color.Gray,
                                 modifier = Modifier.weight(1f)

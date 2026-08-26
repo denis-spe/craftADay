@@ -43,8 +43,9 @@ val Long.toHours: String get() {
 
 val Long.CurrentTimeChange: TimeChange get() {
     val currentTime = System.currentTimeMillis()
-    val timeDifference = currentTime - this
-    val minutes = timeDifference / (1000 * 60)
+    val timeDifference = this - currentTime
+    val absDiff = kotlin.math.abs(timeDifference)
+    val minutes = absDiff / (1000 * 60)
     val hours = minutes / 60
     val days = hours / 24
     val months = days / 30
@@ -56,6 +57,33 @@ val Long.CurrentTimeChange: TimeChange get() {
         days > 0 -> TimeChange.Days(days)
         hours > 0 -> TimeChange.Hours(hours)
         minutes > 0 -> TimeChange.Minutes(minutes)
+        else -> TimeChange.JustNow
+    }
+}
+
+val List<Long>.CurrentTimeChange: TimeChange get() {
+    val lastTimestamp = this.lastOrNull() ?: 0L
+    val currentTime = System.currentTimeMillis()
+    val timeDifference = lastTimestamp - currentTime
+    val absDiff = kotlin.math.abs(timeDifference)
+    val minutes = absDiff / (1000 * 60)
+    val hours = minutes / 60
+    val days = hours / 24
+    val months = days / 30
+    val years = months / 12
+    val date = java.util.Date(lastTimestamp)
+    val format = java.text.SimpleDateFormat("yyyy-MM-dd",
+        Locale.getDefault())
+    val dateString = format.format(date)
+
+    return when {
+        years > 0 -> TimeChange.Years(years)
+        months > 0 -> TimeChange.Months(months)
+        days > 0 -> TimeChange.Days(days)
+        hours > 0 -> TimeChange.Hours(hours)
+        minutes > 0 -> TimeChange.Minutes(minutes)
+        this.isNotEmpty() -> TimeChange.SpecificDate(dateString)
+
         else -> TimeChange.JustNow
     }
 }

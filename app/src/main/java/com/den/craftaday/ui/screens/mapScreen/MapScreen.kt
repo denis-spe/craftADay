@@ -52,9 +52,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.den.craftaday.backend.dataStructure.ConnectorType
-import com.den.craftaday.backend.dataStructure.MapNode
-import com.den.craftaday.backend.dataStructure.LayoutType
+import com.den.craftaday.backend.entities.types.ConnectorType
+import com.den.craftaday.backend.entities.MapNodeEntity
+import com.den.craftaday.backend.entities.types.LayoutType
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.MapViewModel
 import com.den.craftaday.ui.screens.mapScreen.components.ConnectorBottomSheet
@@ -88,8 +88,8 @@ private const val ARROW_GAP_DP = 4f
  * for the radial/grid layouts where the tree shape isn't spatially implied.
  */
 private fun computeConnectorAnchors(
-    parent: MapNode,
-    node: MapNode,
+    parent: MapNodeEntity,
+    node: MapNodeEntity,
     layoutType: LayoutType
 ): ConnectorAnchors = when (layoutType) {
     LayoutType.TOP_DOWN -> ConnectorAnchors(
@@ -140,7 +140,7 @@ private fun computeConnectorAnchors(
 
 
 private fun recenter(
-    nodes: List<MapNode>,
+    nodes: List<MapNodeEntity>,
     scale: MutableFloatState,
     offset: MutableState<Offset>,
     screenWidthPx: MutableFloatState,
@@ -238,7 +238,7 @@ fun MapScreen(
     val scale = remember { mutableFloatStateOf(1f) }
     val offset = remember { mutableStateOf(Offset.Zero) }
 
-    var editingNode by remember { mutableStateOf<MapNode?>(null) }
+    var editingNode by remember { mutableStateOf<MapNodeEntity?>(null) }
     val isCreatingRoot = remember { mutableStateOf(false) }
     var creatingChildForParentId by remember { mutableStateOf<String?>(null) }
 

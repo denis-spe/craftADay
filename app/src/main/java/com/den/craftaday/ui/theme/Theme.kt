@@ -52,7 +52,7 @@ fun CraftADayTheme(
         ExtendedColors(
             text = Color.Black,
             background = Color(0xFFF5F5F5),
-            primary = AppStartColor,
+            primary = Color(0xFF5C6BC0),
             secondary = Color(0xFFC54E29)
         )
     }

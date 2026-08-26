@@ -2,7 +2,7 @@
 package com.den.craftaday.backend.useCase
 
 import android.content.Context
-import com.den.craftaday.backend.blueprints.AccountService
+import com.den.craftaday.backend.repositories.services.AccountService
 import com.den.craftaday.backend.states.AuthState
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject

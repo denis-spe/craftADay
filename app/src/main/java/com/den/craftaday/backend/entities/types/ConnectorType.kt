@@ -1,4 +1,4 @@
-package com.den.craftaday.backend.dataStructure
+package com.den.craftaday.backend.entities.types
 
 /**
  * Available visual styles for node connector lines.

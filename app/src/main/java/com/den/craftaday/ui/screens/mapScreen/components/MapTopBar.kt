@@ -24,8 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.den.craftaday.backend.dataStructure.ConnectorType
-import com.den.craftaday.backend.dataStructure.LayoutType
+import com.den.craftaday.backend.entities.types.ConnectorType
+import com.den.craftaday.backend.entities.types.LayoutType
 import com.den.craftaday.helper.toTitle
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,7 +76,7 @@ fun MapTopBar(
                     IconButton(onClick = {
                         onRecenter()
                     }) {
-                        Icon(Icons.Default.CenterFocusStrong, contentDescription = "Reset View")
+                        Icon(Icons.Default.CenterFocusStrong, contentDescription = "TaskAlarmType View")
                     }
                 }
             }

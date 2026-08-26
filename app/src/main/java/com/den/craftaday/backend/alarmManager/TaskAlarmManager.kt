@@ -1,3 +1,4 @@
+// Glory be to name LORD GOD
 package com.den.craftaday.backend.alarmManager
 
 import android.app.AlarmManager
@@ -6,46 +7,46 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import com.den.craftaday.backend.entities.TaskEntity
+import com.den.craftaday.helper.toLocalTimeDate
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.model.Values.timestamp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class MapAlarmManager @Inject constructor(
+class TaskAlarmManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+
+    companion object {
+        const val ACTION_TASK_REMINDER = "com.den.craftaday.ACTION_TASK_ALARM"
+        const val TAG = "TaskAlarmManager"
+    }
+
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     fun scheduleAlarm(
-        collectionId: String = "", // Default to empty for root maps
-        mapId: String,
-        nodeId: String,
-        nodeTitle: String,
-        timestamp: Timestamp,
-        status: String = "TODO"
+        task: TaskEntity
     ) {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = "com.den.craftaday.ACTION_TASK_REMINDER"
-            putExtra("collectionId", collectionId)
-            putExtra("mapId", mapId)
-            putExtra("nodeId", nodeId)
-            putExtra("nodeTitle", nodeTitle)
-            putExtra("status", status)
+            action = ACTION_TASK_REMINDER
+            putExtra("collectionId", task.collectionId)
         }
 
-        // Use nodeId.hashCode() as a unique request code for each node
+        // Use taskId.hashCode() as a unique request code for each task
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            nodeId.hashCode(),
+            task.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val triggerAtMillis = timestamp.toDate().time
+        val triggerAtMillis = task.taskAlarmType.primaryTimestamp
 
         if (triggerAtMillis <= System.currentTimeMillis()) {
-            Log.w("MapAlarmManager", "Attempted to schedule alarm in the past for node $nodeId")
+            Log.w(TAG, "Attempted to schedule alarm in the past for ${task.title}")
             return
         }
 
@@ -56,7 +57,7 @@ class MapAlarmManager @Inject constructor(
                     triggerAtMillis,
                     pendingIntent
                 )
-                Log.d("MapAlarmManager", "Scheduled EXACT alarm for node $nodeId at $triggerAtMillis")
+                Log.d(TAG, "Scheduled EXACT alarm for ${task.title} at $triggerAtMillis")
             } else {
                 // Fallback for missing permission or older devices
                 alarmManager.setAndAllowWhileIdle(
@@ -64,16 +65,16 @@ class MapAlarmManager @Inject constructor(
                     triggerAtMillis,
                     pendingIntent
                 )
-                Log.d("MapAlarmManager", "Scheduled INEXACT fallback alarm for node $nodeId at $triggerAtMillis")
+                Log.d(TAG, "Scheduled INEXACT fallback alarm for ${task.title} at $triggerAtMillis")
             }
         } catch (e: Exception) {
-            Log.e("MapAlarmManager", "Error scheduling alarm: ${e.message}")
+            Log.e(TAG, "Error scheduling alarm: ${e.message}")
         }
     }
 
     fun cancelAlarm(nodeId: String) {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = "com.den.craftaday.ACTION_TASK_REMINDER"
+            action = ACTION_TASK_REMINDER
         }
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -82,6 +83,6 @@ class MapAlarmManager @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         alarmManager.cancel(pendingIntent)
-        Log.d("MapAlarmManager", "Cancelled alarm for node $nodeId")
+        Log.d(TAG, "Cancelled alarm for node $nodeId")
     }
 }

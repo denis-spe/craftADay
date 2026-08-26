@@ -50,12 +50,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.den.craftaday.backend.dataStructure.MapNode
+import com.den.craftaday.backend.entities.MapNodeEntity
 import androidx.core.graphics.toColorInt
 
 @Composable
 fun MapNodeItem(
-    node: MapNode,
+    node: MapNodeEntity,
     isSelected: Boolean = false,
     onDragStart: () -> Unit,
     onDrag: (Float, Float) -> Unit,

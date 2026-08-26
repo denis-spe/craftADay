@@ -4,18 +4,19 @@ package com.den.craftaday.ui.screens.homeScreen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,18 +28,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation3.runtime.NavBackStack
-import androidx.navigation3.runtime.NavKey
-import com.den.craftaday.backend.dataStructure.ListCollection
+import com.den.craftaday.backend.entities.ListCollectionEntity
 import com.den.craftaday.backend.states.DataState
-import com.den.craftaday.ui.screens.screenManager.CollectionDetailRouter
 
 
 @Composable
 fun CollectionsList(
-    collections: List<ListCollection>,
+    collections: List<ListCollectionEntity>,
     selectedTab: Int,
     onAddCollection: () -> Unit,
     onTabSelected: (selectedTab: Int, collectionId: String) -> Unit
@@ -52,16 +51,19 @@ fun CollectionsList(
                 onClick = onAddCollection
             )
         }
-        items(collections.size) { index ->
-            val collection = collections[index]
 
-            CollectionItem(
-                selectedTab = selectedTab == index,
-                collection = collection,
-                onClick = {
-                    onTabSelected(index, collection.id)
-                }
-            )
+        if (collections.isNotEmpty()) {
+            items(collections.size) { index ->
+                val collection = collections[index]
+
+                CollectionItem(
+                    selectedTab = selectedTab == index,
+                    collection = collection,
+                    onClick = {
+                        onTabSelected(index, collection.id)
+                    }
+                )
+            }
         }
     }
 }
@@ -69,7 +71,7 @@ fun CollectionsList(
 @Composable
 fun CollectionItem(
     selectedTab: Boolean,
-    collection: ListCollection,
+    collection: ListCollectionEntity,
     onClick: () -> Unit
 ) {
     OutlinedCard(
@@ -130,9 +132,10 @@ fun AddCollection(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                painter = painterResource(id = com.den.craftaday.R.drawable.ic_plus_3d),
                 contentDescription = null,
-                modifier = Modifier.size(25.dp)
+                modifier = Modifier.size(25.dp),
+                tint = Color.Unspecified
             )
 
             Text(
@@ -147,17 +150,32 @@ fun AddCollection(
 
 @Composable
 fun EmptyCollectionList() {
-    Box {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            painter = painterResource(id = com.den.craftaday.R.drawable.ic_empty_collection),
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = Color.Unspecified
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "No collections found",
-            modifier = Modifier.align(Alignment.Center)
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline
         )
     }
 }
 
 @Composable
 fun LoadingCollectionList() {
-    Box {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
     }
 }
@@ -166,7 +184,10 @@ fun LoadingCollectionList() {
 fun ErrorCollectionList(
     state: DataState.Error
 ) {
-    Box {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
         Text(
             text = "Error: ${state.exception.message}",
             color = Color.Red,

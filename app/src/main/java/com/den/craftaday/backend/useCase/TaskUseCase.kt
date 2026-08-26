@@ -1,31 +1,31 @@
 // Glory be to the name of the LORD of host
 package com.den.craftaday.backend.useCase
 
-import com.den.craftaday.backend.blueprints.AccountService
-import com.den.craftaday.backend.blueprints.DataStorage
-import com.den.craftaday.backend.dataStructure.Task
+import com.den.craftaday.backend.repositories.services.AccountService
+import com.den.craftaday.backend.repositories.services.DataStorageService
+import com.den.craftaday.backend.entities.TaskEntity
 import javax.inject.Inject
 
 
 class TaskUseCase @Inject constructor(
-    private val dataStorage: DataStorage,
+    private val dataStorageService: DataStorageService,
     private val accountService: AccountService
 ) {
     private val userId get() = accountService.currentUserId
 
-    fun addTask(collectionId: String, task: Task) {
-        dataStorage.addTask(userId = userId, collectionId = collectionId, task = task)
+    fun addTask(collectionId: String, taskEntity: TaskEntity) {
+        dataStorageService.addTask(userId = userId, collectionId = collectionId, taskEntity = taskEntity)
     }
 
-    fun getAllTasks() = dataStorage.getAllDatasets(userId = userId)
+    fun getAllTasks() = dataStorageService.getAllDatasets(userId = userId)
 
-    fun getTasksInCollection(collectionId: String) = dataStorage.getTasksInCollection(userId, collectionId)
+    fun getTasksInCollection(collectionId: String) = dataStorageService.getTasksInCollection(userId, collectionId)
 
-    fun deleteTask(collectionId: String, task: Task) {
-        dataStorage.deleteTask(userId = userId, collectionId = collectionId, task = task)
+    fun deleteTask(collectionId: String, taskEntity: TaskEntity) {
+        dataStorageService.deleteTask(userId = userId, collectionId = collectionId, taskEntity = taskEntity)
     }
 
-    fun updateTask(collectionId: String, task: Task) {
-        dataStorage.updateTask(userId = userId, collectionId = collectionId, task = task)
+    fun updateTask(collectionId: String, taskEntity: TaskEntity) {
+        dataStorageService.updateTask(userId = userId, collectionId = collectionId, taskEntity = taskEntity)
     }
 }

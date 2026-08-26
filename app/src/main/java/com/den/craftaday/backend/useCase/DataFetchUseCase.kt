@@ -1,9 +1,9 @@
 // Glory be to LORD GOD
 package com.den.craftaday.backend.useCase
 
-import com.den.craftaday.backend.dataStructure.ListCollection
-import com.den.craftaday.backend.dataStructure.ProjectMap
-import com.den.craftaday.backend.dataStructure.Task
+import com.den.craftaday.backend.entities.MapEntity
+import com.den.craftaday.backend.entities.ListCollectionEntity
+import com.den.craftaday.backend.entities.TaskEntity
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.states.DataState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,7 +30,7 @@ class DataFetchUseCase @Inject constructor(
     val fetchAllCollections = authorizationUseCase.userState
         .flatMapLatest { authState ->
             if (authState is AuthState.Authenticated) {
-                mapUseCase.getAllCollections().map<List<ListCollection>, DataState<List<ListCollection>>> { collections ->
+                mapUseCase.getAllCollections().map<List<ListCollectionEntity>, DataState<List<ListCollectionEntity>>> { collections ->
                     DataState.Success(collections)
                 }
                     .catch { exception ->
@@ -44,18 +44,18 @@ class DataFetchUseCase @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val mapsInCollection = _currentCollectionId
         .flatMapLatest { id ->
-            if (id == null) return@flatMapLatest emptyFlow<DataState<List<ProjectMap>>>()
+            if (id == null) return@flatMapLatest emptyFlow()
             mapUseCase.getMapsInCollection(id)
-                .map { DataState.Success(it) as DataState<List<ProjectMap>> }
+                .map { DataState.Success(it) as DataState<List<MapEntity>> }
                 .catch { emit(DataState.Error(it)) }
         }.distinctUntilChanged()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val tasksInCollection = _currentCollectionId
         .flatMapLatest { id ->
-            if (id == null) return@flatMapLatest emptyFlow<DataState<List<Task>>>()
+            if (id == null) return@flatMapLatest emptyFlow<DataState<List<TaskEntity>>>()
             taskUseCase.getTasksInCollection(id)
-                .map { DataState.Success(it) as DataState<List<Task>> }
+                .map { DataState.Success(it) as DataState<List<TaskEntity>> }
                 .catch { emit(DataState.Error(it)) }
         }.distinctUntilChanged()
 }

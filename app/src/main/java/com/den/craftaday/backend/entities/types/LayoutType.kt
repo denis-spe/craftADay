@@ -1,4 +1,4 @@
-package com.den.craftaday.backend.dataStructure
+package com.den.craftaday.backend.entities.types
 
 /**
  * The available automatic arrangement algorithms for the diagram/tree screen.

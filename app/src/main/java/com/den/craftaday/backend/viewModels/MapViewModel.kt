@@ -5,12 +5,12 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.den.craftaday.backend.alarmManager.MapAlarmManager
-import com.den.craftaday.backend.dataStructure.ConnectorType
+import com.den.craftaday.backend.entities.types.ConnectorType
 import com.den.craftaday.helper.ReminderUtils
 import java.util.UUID
-import com.den.craftaday.backend.dataStructure.MapNode
-import com.den.craftaday.backend.dataStructure.ProjectMap
-import com.den.craftaday.backend.dataStructure.LayoutType
+import com.den.craftaday.backend.entities.MapNodeEntity
+import com.den.craftaday.backend.entities.MapEntity
+import com.den.craftaday.backend.entities.types.LayoutType
 import com.google.firebase.Timestamp
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.states.DataState
@@ -38,7 +38,7 @@ import kotlin.math.sqrt
  * Internal tree node used purely for layout calculations.
  * `weight` is repurposed per-algorithm (subtree width, subtree height, or leaf count).
  */
-private class LayoutNode(val node: MapNode) {
+private class LayoutNode(val node: MapNodeEntity) {
     val children = mutableListOf<LayoutNode>()
     var weight = 0f
     var x = 0f
@@ -46,7 +46,7 @@ private class LayoutNode(val node: MapNode) {
 }
 
 /** Builds a parent->children lookup over the flat node list, keyed by node id. */
-private fun buildLayoutTree(currentList: List<MapNode>): Pair<Map<String, LayoutNode>, List<LayoutNode>> {
+private fun buildLayoutTree(currentList: List<MapNodeEntity>): Pair<Map<String, LayoutNode>, List<LayoutNode>> {
     val nodeMap = currentList.associateBy({ it.id }, { LayoutNode(it) })
     currentList.forEach { node ->
         if (node.parentId != null) {
@@ -76,15 +76,15 @@ class MapViewModel @Inject constructor(
         _mapId.value = mapId
     }
 
-    val currentMap: StateFlow<DataState<ProjectMap>> = _mapId
+    val currentMap: StateFlow<DataState<MapEntity>> = _mapId
         .flatMapLatest { mapId ->
             val collectionId = _collectionId.value
-            if (mapId == null || collectionId == null) return@flatMapLatest emptyFlow<DataState<ProjectMap>>()
+            if (mapId == null || collectionId == null) return@flatMapLatest emptyFlow<DataState<MapEntity>>()
             authorizationUseCase.userState.flatMapLatest { authState ->
                 if (authState is AuthState.Authenticated) {
                     mapUseCase.getMap(collectionId, mapId)
                         .map { map ->
-                            val m = map ?: ProjectMap()
+                            val m = map ?: MapEntity()
                             
                             // Sync internal layout state with saved preference
                             try {
@@ -105,7 +105,7 @@ class MapViewModel @Inject constructor(
                             } catch (_: Exception) {
                                 Log.e("MapViewModel", "Invalid connector type saved: ${m.connectorType}")
                             }
-                            DataState.Success(m) as DataState<ProjectMap>
+                            DataState.Success(m) as DataState<MapEntity>
                         }
                         .catch { emit(DataState.Error(it)) }
                 } else {
@@ -119,17 +119,17 @@ class MapViewModel @Inject constructor(
             initialValue = DataState.Loading
         )
 
-    val nodes: StateFlow<DataState<List<MapNode>>> = _mapId
+    val nodes: StateFlow<DataState<List<MapNodeEntity>>> = _mapId
         .flatMapLatest { mapId ->
             val collectionId = _collectionId.value
-            if (mapId == null || collectionId == null) return@flatMapLatest emptyFlow<DataState<List<MapNode>>>()
+            if (mapId == null || collectionId == null) return@flatMapLatest emptyFlow<DataState<List<MapNodeEntity>>>()
             authorizationUseCase.userState.flatMapLatest { authState ->
                 when (authState) {
                     is AuthState.Authenticated -> {
                         Log.d("MapViewModel", "User authenticated. Starting observation for map: $mapId")
                         mapUseCase.getMapNodes(collectionId, mapId)
                             .onEach { Log.d("MapViewModel", "Fetched ${it.size} nodes for map: $mapId") }
-                            .map { DataState.Success(it) as DataState<List<MapNode>> }
+                            .map { DataState.Success(it) as DataState<List<MapNodeEntity>> }
                             .catch {
                                 Log.e("MapViewModel", "Error in map flow for map: $mapId", it)
                                 emit(DataState.Error(it))
@@ -137,7 +137,7 @@ class MapViewModel @Inject constructor(
                     }
                     is AuthState.NotAuthenticated -> {
                         Log.d("MapViewModel", "User not authenticated. Emitting empty success state.")
-                        kotlinx.coroutines.flow.flowOf(DataState.Success(emptyList<MapNode>()))
+                        kotlinx.coroutines.flow.flowOf(DataState.Success(emptyList<MapNodeEntity>()))
                     }
                     else -> {
                         Log.d("MapViewModel", "Auth state: $authState. Emitting Loading.")
@@ -187,7 +187,7 @@ class MapViewModel @Inject constructor(
     ) {
         val mapId = _mapId.value ?: return
         val collectionId = _collectionId.value ?: return
-        val currentList = (nodes.value as? DataState.Success<List<MapNode>>)?.data ?: emptyList()
+        val currentList = (nodes.value as? DataState.Success<List<MapNodeEntity>>)?.data ?: emptyList()
 
         var calculatedX = x
         var calculatedY = y
@@ -220,7 +220,7 @@ class MapViewModel @Inject constructor(
 
         val generatedId = UUID.randomUUID().toString()
 
-        val newNode = MapNode(
+        val newNode = MapNodeEntity(
             id = generatedId,
             title = title,
             description = description,
@@ -251,7 +251,7 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    fun updateNodeDetails(node: MapNode) {
+    fun updateNodeDetails(node: MapNodeEntity) {
         val mapId = _mapId.value ?: return
         val collectionId = _collectionId.value ?: return
         Log.d("MapViewModel", "updateNodeDetails called for node ${node.id}. New Remainder: ${node.remainder?.toDate()}")
@@ -274,7 +274,7 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    fun toggleTaskStatus(node: MapNode) {
+    fun toggleTaskStatus(node: MapNodeEntity) {
         val mapId = _mapId.value ?: return
         val collectionId = _collectionId.value ?: return
         val nextStatus = when (node.status) {
@@ -301,7 +301,7 @@ class MapViewModel @Inject constructor(
             
             if (node.alarmRepeat != "NONE" && node.remainder != null) {
                 val nextTimestamp = ReminderUtils.calculateNextTimestamp(node.remainder!!, node.alarmRepeat)
-                // Reset recurring task for the next cycle
+                // TaskAlarmType recurring task for the next cycle
                 fields["status"] = "TODO"
                 fields["progress"] = 0f
                 fields["remainder"] = nextTimestamp
@@ -328,7 +328,7 @@ class MapViewModel @Inject constructor(
         )
     }
 
-    fun updateNodePosition(node: MapNode, x: Float, y: Float) {
+    fun updateNodePosition(node: MapNodeEntity, x: Float, y: Float) {
         val mapId = _mapId.value ?: return
         val collectionId = _collectionId.value ?: return
         mapUseCase.updateMapNodeFields(
@@ -340,12 +340,12 @@ class MapViewModel @Inject constructor(
     }
 
     fun reparentNode(
-        node: MapNode,
+        node: MapNodeEntity,
         newParentId: String?
     ) {
         val mapId = _mapId.value ?: return
         val collectionId = _collectionId.value ?: return
-        val currentList = (nodes.value as? DataState.Success<List<MapNode>>)?.data ?: emptyList()
+        val currentList = (nodes.value as? DataState.Success<List<MapNodeEntity>>)?.data ?: emptyList()
         var newX = node.x
         var newY = node.y
 
@@ -362,7 +362,7 @@ class MapViewModel @Inject constructor(
     fun deleteNodeAndSubtree(nodeId: String) {
         val mapId = _mapId.value ?: return
         val collectionId = _collectionId.value ?: return
-        val currentList = (nodes.value as? DataState.Success<List<MapNode>>)?.data ?: emptyList()
+        val currentList = (nodes.value as? DataState.Success<List<MapNodeEntity>>)?.data ?: emptyList()
         val toDelete = mutableSetOf<String>()
 
         fun collectSubtree(id: String) {
@@ -387,7 +387,7 @@ class MapViewModel @Inject constructor(
     ) {
         val mapId = _mapId.value ?: return
         val collectionId = _collectionId.value ?: return
-        val currentList = (nodes.value as? DataState.Success<List<MapNode>>)?.data ?: return
+        val currentList = (nodes.value as? DataState.Success<List<MapNodeEntity>>)?.data ?: return
         if (currentList.isEmpty()) return
 
         _layoutType.value = layoutType
@@ -429,7 +429,7 @@ class MapViewModel @Inject constructor(
      */
     private fun layoutTopDown(
         mapId: String,
-        currentList: List<MapNode>
+        currentList: List<MapNodeEntity>
     ) {
         val cardWidthDp = 200f
         val nodeGapDp = 40f
@@ -481,7 +481,7 @@ class MapViewModel @Inject constructor(
      */
     private fun layoutLeftRight(
         mapId: String,
-        currentList: List<MapNode>
+        currentList: List<MapNodeEntity>
     ) {
         val cardHeightDp = 110f
         val nodeGapDp = 30f
@@ -534,7 +534,7 @@ class MapViewModel @Inject constructor(
      */
     private fun layoutRadial(
         mapId: String,
-        currentList: List<MapNode>
+        currentList: List<MapNodeEntity>
     ) {
         val ringRadiusStepDp = 240f
         val centerX = 900f
@@ -592,7 +592,7 @@ class MapViewModel @Inject constructor(
      */
     private fun layoutGrid(
         mapId: String,
-        currentList: List<MapNode>
+        currentList: List<MapNodeEntity>
     ) {
         val cardWidthDp = 200f
         val cardHeightDp = 130f
@@ -602,7 +602,7 @@ class MapViewModel @Inject constructor(
         val (nodeMap, _) = buildLayoutTree(currentList)
         val byId = currentList.associateBy { it.id }
 
-        fun depthOf(node: MapNode): Int {
+        fun depthOf(node: MapNodeEntity): Int {
             var depth = 0
             var current = node
             while (current.parentId != null) {
@@ -633,7 +633,7 @@ class MapViewModel @Inject constructor(
      */
     private fun layoutBottomUp(
         mapId: String,
-        currentList: List<MapNode>
+        currentList: List<MapNodeEntity>
     ) {
         val cardWidthDp = 200f
         val nodeGapDp = 40f
@@ -687,7 +687,7 @@ class MapViewModel @Inject constructor(
      */
     private fun layoutMindMap(
         mapId: String,
-        currentList: List<MapNode>
+        currentList: List<MapNodeEntity>
     ) {
         val cardHeightDp = 110f
         val nodeGapDp = 30f

@@ -3,11 +3,9 @@ package com.den.craftaday.backend.viewModels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.den.craftaday.backend.dataStructure.ProjectMap
-import com.den.craftaday.backend.dataStructure.Task
-import com.den.craftaday.backend.dataStructure.ListCollection
-import com.den.craftaday.backend.dataStructure.Mark
-import com.den.craftaday.backend.states.AuthState
+import com.den.craftaday.backend.entities.MapEntity
+import com.den.craftaday.backend.entities.TaskEntity
+import com.den.craftaday.backend.entities.ListCollectionEntity
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.useCase.AuthorizationUseCase
 import com.den.craftaday.backend.useCase.DataFetchUseCase
@@ -15,12 +13,7 @@ import com.den.craftaday.backend.useCase.MapUseCase
 import com.den.craftaday.backend.useCase.TaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -76,27 +69,27 @@ class HomeViewModel @Inject constructor(
 
     // ============================== Data update from fire store ======================
     /**
-     * Update the task mark
-     * @param task The task to update
+     * Update the taskEntity markType
+     * @param taskEntity The taskEntity to update
      */
-    fun onMarkClick(task: Task) {
-        taskUseCase.updateTask(task.collectionId, task)
+    fun onMarkClick(taskEntity: TaskEntity) {
+        taskUseCase.updateTask(taskEntity.collectionId, taskEntity)
     }
 
 
     /**
-     * Update a task in a collection
+     * Update a taskEntity in a collection
      * @param collectionId of the collection
-     * @param task to update
+     * @param taskEntity to update
      */
-    fun updateTask(collectionId: String, task: Task) = taskUseCase.updateTask(collectionId, task)
+    fun updateTask(collectionId: String, taskEntity: TaskEntity) = taskUseCase.updateTask(collectionId, taskEntity)
 
     /**
      * Update a map in a collection
      * @param collectionId of the collection
      * @param map to update
      */
-    fun updateMap(collectionId: String, map: ProjectMap) = mapUseCase.updateMap(collectionId, map)
+    fun updateMap(collectionId: String, map: MapEntity) = mapUseCase.updateMap(collectionId, map)
 
     // ============================ Adding Data to fire store ==========================
     /**
@@ -106,20 +99,20 @@ class HomeViewModel @Inject constructor(
      * @param description of the map
      */
     fun addMap(collectionId: String, title: String, description: String) =
-        mapUseCase.addMap(collectionId, ProjectMap(title = title, description = description))
+        mapUseCase.addMap(collectionId, MapEntity(title = title, description = description))
 
     /**
-     * Add a task to a collection
+     * Add a taskEntity to a collection
      * @param collectionId of the collection
-     * @param task to add
+     * @param taskEntity to add
      */
-    fun addTaskData(collectionId: String, task: Task) = taskUseCase.addTask(collectionId, task)
+    fun addTaskData(collectionId: String, taskEntity: TaskEntity) = taskUseCase.addTask(collectionId, taskEntity)
 
     /**
      * Add a collection to the user
      * @param name of the collection
      */
-    fun addCollection(name: String) = mapUseCase.addCollection(ListCollection(name = name))
+    fun addCollection(name: String) = mapUseCase.addCollection(ListCollectionEntity(name = name))
 
     //  ============================= Deleting Data from fire store =====================
 
@@ -128,12 +121,12 @@ class HomeViewModel @Inject constructor(
      * @param collectionId of the collection
      * @param map to delete
      */
-    fun deleteMap(collectionId: String, map: ProjectMap) = mapUseCase.deleteMap(collectionId, map)
+    fun deleteMap(collectionId: String, map: MapEntity) = mapUseCase.deleteMap(collectionId, map)
 
     /**
-     * Delete a task from a collection
+     * Delete a taskEntity from a collection
      * @param collectionId of the collection
-     * @param task to delete
+     * @param taskEntity to delete
      */
-    fun deleteTask(collectionId: String, task: Task) = taskUseCase.deleteTask(collectionId, task)
+    fun deleteTask(collectionId: String, taskEntity: TaskEntity) = taskUseCase.deleteTask(collectionId, taskEntity)
 }

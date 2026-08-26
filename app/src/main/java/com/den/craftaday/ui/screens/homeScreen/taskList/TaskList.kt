@@ -1,5 +1,5 @@
 // Glory be to the LORD our GOD
-package com.den.craftaday.ui.screens.homeScreen.taskTab
+package com.den.craftaday.ui.screens.homeScreen.taskList
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.graphics.res.animatedVectorResource
@@ -33,7 +33,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,9 +46,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.den.craftaday.backend.dataStructure.Mark
-import com.den.craftaday.backend.dataStructure.Reset
-import com.den.craftaday.backend.dataStructure.Task
+import com.den.craftaday.backend.entities.types.MarkType
+import com.den.craftaday.backend.entities.types.TaskAlarmType
+import com.den.craftaday.backend.entities.TaskEntity
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.HomeViewModel
 import com.den.craftaday.helper.CurrentTimeChange
@@ -58,7 +57,7 @@ import com.den.craftaday.helper.TimeChange
 @Composable
 fun TaskList(
     homeViewModel: HomeViewModel,
-    onMarkClick: (task: Task) -> Unit
+    onMarkClick: (taskEntity: TaskEntity) -> Unit
 ) {
     val state by homeViewModel.tasksInCollection.collectAsStateWithLifecycle()
 
@@ -73,17 +72,31 @@ fun TaskList(
             is DataState.Success -> {
                 val tasks = (state as DataState.Success).data
                 if (tasks.isEmpty()) {
-                    Text(
-                        "No tasks in this collection.",
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = com.den.craftaday.R.drawable.ic_task),
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = Color.Unspecified
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "No tasks in this collection.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
                 } else {
                     LazyColumn(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(tasks, key = { it.id }) { task ->
-                            TaskItem(task = task, onMarkClick = onMarkClick)
+                            TaskItem(taskEntity = task, onMarkClick = onMarkClick)
                         }
                     }
                 }
@@ -94,54 +107,55 @@ fun TaskList(
 
 @Composable
 fun TaskItem(
-    task: Task,
-    onMarkClick: (task: Task) -> Unit
+    taskEntity: TaskEntity,
+    onMarkClick: (taskEntity: TaskEntity) -> Unit
 ) {
-    val mark = task.mark
+    val mark = taskEntity.markType
 
     val color = remember(mark) {
         when (mark) {
-            Mark.Done -> Color(0xFF388E3C)
-            Mark.InProgress -> Color(0xFFFFA500)
-            Mark.Failed -> Color(0xFFB00020)
-            Mark.Initial -> Color.Gray
+            MarkType.Done -> Color(0xFF388E3C)
+            MarkType.InProgress -> Color(0xFFFFA500)
+            MarkType.Failed -> Color(0xFFB00020)
+            MarkType.Initial -> Color.Gray
         }
     }
     val textDecoration = remember(mark) {
         when (mark) {
-            Mark.Done -> TextDecoration.LineThrough
-            Mark.InProgress -> TextDecoration.None
-            Mark.Failed -> TextDecoration.LineThrough
-            Mark.Initial -> TextDecoration.None
+            MarkType.Done -> TextDecoration.LineThrough
+            MarkType.InProgress -> TextDecoration.None
+            MarkType.Failed -> TextDecoration.LineThrough
+            MarkType.Initial -> TextDecoration.None
         }
     }
 
-    val deadlineTimeChange = remember(task.onReset) {
-        if (task.onReset is Reset.No) return@remember null
-        val timeChange = when (task.onReset) {
-            is Reset.Once -> task.onReset.dateTime.CurrentTimeChange
-            is Reset.Daily -> task.onReset.dateTime.CurrentTimeChange
-            is Reset.Weekly -> task.onReset.dateTime.CurrentTimeChange
-            is Reset.Monthly -> task.onReset.dateTime.CurrentTimeChange
-            is Reset.Yearly -> task.onReset.dateTime.CurrentTimeChange
+    val deadlineTimeChange = remember(taskEntity.taskAlarmType) {
+        val timeChange = when (val alarm = taskEntity.taskAlarmType) {
+            is TaskAlarmType.SpecificWeekDay -> alarm.dateTimes.CurrentTimeChange
+            is TaskAlarmType.SpecificDate -> alarm.dateTimes.CurrentTimeChange
+            else -> alarm.primaryTimestamp.CurrentTimeChange
         }
 
-        when (timeChange) {
-            is TimeChange.Months -> "Deadline in ${timeChange.value} months"
-            is TimeChange.Years -> "Deadline in ${timeChange.value} years"
-            is TimeChange.Days -> "Deadline in ${timeChange.value} days"
-            is TimeChange.Hours -> "Deadline in ${timeChange.value} hours"
-            is TimeChange.Minutes -> "Deadline in ${timeChange.value} minutes"
-            is TimeChange.JustNow -> "just now"
+        val label = when (timeChange) {
+            is TimeChange.Years -> "${timeChange.value} years"
+            is TimeChange.Months -> "${timeChange.value} months"
+            is TimeChange.Days -> "${timeChange.value} days"
+            is TimeChange.Hours -> "${timeChange.value} hours"
+            is TimeChange.Minutes -> "${timeChange.value} minutes"
+            is TimeChange.SpecificDate -> timeChange.value
+            is TimeChange.SpecificWeekDay -> timeChange.value
+            TimeChange.JustNow -> "just now"
         }
+
+        if (label == "just now") label else "Deadline in $label"
     }
 
-    val markState = remember(task.mark) {
+    val markTypeState = remember(taskEntity.markType) {
         when (mark) {
-            Mark.Done -> Mark.Failed
-            Mark.InProgress -> Mark.Done
-            Mark.Failed -> Mark.Initial
-            Mark.Initial -> Mark.InProgress
+            MarkType.Done -> MarkType.Failed
+            MarkType.InProgress -> MarkType.Done
+            MarkType.Failed -> MarkType.Initial
+            MarkType.Initial -> MarkType.InProgress
         }
     }
 
@@ -153,7 +167,7 @@ fun TaskItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         onClick = {
-            onMarkClick(task.copy(mark = markState))
+            onMarkClick(taskEntity.copy(markType = markTypeState))
         }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -161,11 +175,11 @@ fun TaskItem(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header icon reflects the task's actual current state, so it's the
+                // Header icon reflects the taskEntity's actual current state, so it's the
                 // only icon in this row that should animate.
 
                 Image(
-                    painter = painterResource(id = task.chosenIcon),
+                    painter = painterResource(id = taskEntity.chosenIcon),
                     contentDescription = null,
                     modifier = Modifier.size(28.dp)
                 )
@@ -173,23 +187,21 @@ fun TaskItem(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        task.title,
+                        taskEntity.title,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         textDecoration = textDecoration
                     )
 
-                    deadlineTimeChange?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
-                        )
-                    }
+                    Text(
+                        text = deadlineTimeChange,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
                 }
 
                 StatusIcon(
-                    mark = mark,
+                    markType = mark,
                     animate = true,
                     modifier = Modifier.size(28.dp)
                 )
@@ -207,10 +219,10 @@ fun TaskItem(
                 }
             }
 
-            if (task.description.isNotBlank()) {
+            if (taskEntity.description.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = task.description,
+                    text = taskEntity.description,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -218,7 +230,7 @@ fun TaskItem(
 
             TaskIconToggleButtons(
                 isVisible = isVisible,
-                task = task,
+                taskEntity = taskEntity,
                 onMarkChange = onMarkClick
             )
         }
@@ -226,24 +238,24 @@ fun TaskItem(
 }
 
 /**
- * Renders the status icon for [mark]. When [animate] is false, a static
+ * Renders the status icon for [markType]. When [animate] is false, a static
  * (non-animated) drawable is used instead of inflating an AnimatedVectorDrawable —
  * avoids running an infinite-repeat animator for icons that aren't the active state
  * (e.g. unselected toggle buttons in a long, recycled list).
  */
 @Composable
 fun StatusIcon(
-    mark: Mark,
+    markType: MarkType,
     animate: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val drawableRes = when (mark) {
-        Mark.Initial -> com.den.craftaday.R.drawable.avd_task_initial
-        Mark.Done -> com.den.craftaday.R.drawable.avd_task_done
+    val drawableRes = when (markType) {
+        MarkType.Initial -> com.den.craftaday.R.drawable.avd_task_initial
+        MarkType.Done -> com.den.craftaday.R.drawable.avd_task_done
         else -> com.den.craftaday.R.drawable.avd_task_failed
     }
 
-    if (mark == Mark.InProgress) {
+    if (markType == MarkType.InProgress) {
         Image(
             painter = painterResource(id = com.den.craftaday.R.drawable.avd_task_in_progress),
             contentDescription = null,
@@ -261,7 +273,7 @@ fun StatusIcon(
 
 
     // Simplified animation state to avoid double-recomposition on start.
-    val atEnd by remember(mark, animate) { mutableStateOf(mark != Mark.InProgress && !animate) }
+    val atEnd by remember(markType, animate) { mutableStateOf(markType != MarkType.InProgress && !animate) }
     val painter = rememberAnimatedVectorPainter(image, atEnd || animate)
 
     Image(
@@ -274,8 +286,8 @@ fun StatusIcon(
 @Composable
 fun TaskIconToggleButtons(
     isVisible: Boolean,
-    task: Task,
-    onMarkChange: (Task) -> Unit
+    taskEntity: TaskEntity,
+    onMarkChange: (TaskEntity) -> Unit
 ) {
     Column {
         AnimatedVisibility(
@@ -292,32 +304,32 @@ fun TaskIconToggleButtons(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     StatusButton(
-                        selected = task.mark == Mark.Initial,
-                        mark = Mark.Initial,
+                        selected = taskEntity.markType == MarkType.Initial,
+                        markType = MarkType.Initial,
                         label = "Initial",
                         color = Color(0xFF777672),
-                        onClick = remember(task, onMarkChange) { { onMarkChange(task.copy(mark = Mark.Initial)) } }
+                        onClick = remember(taskEntity, onMarkChange) { { onMarkChange(taskEntity.copy(markType = MarkType.Initial)) } }
                     )
                     StatusButton(
-                        selected = task.mark == Mark.InProgress,
-                        mark = Mark.InProgress,
+                        selected = taskEntity.markType == MarkType.InProgress,
+                        markType = MarkType.InProgress,
                         label = "Doing",
                         color = Color(0xFFFFA500),
-                        onClick = remember(task, onMarkChange) { { onMarkChange(task.copy(mark = Mark.InProgress)) } }
+                        onClick = remember(taskEntity, onMarkChange) { { onMarkChange(taskEntity.copy(markType = MarkType.InProgress)) } }
                     )
                     StatusButton(
-                        selected = task.mark == Mark.Done,
-                        mark = Mark.Done,
+                        selected = taskEntity.markType == MarkType.Done,
+                        markType = MarkType.Done,
                         label = "Done",
                         color = Color(0xFF388E3C),
-                        onClick = remember(task, onMarkChange) { { onMarkChange(task.copy(mark = Mark.Done)) } }
+                        onClick = remember(taskEntity, onMarkChange) { { onMarkChange(taskEntity.copy(markType = MarkType.Done)) } }
                     )
                     StatusButton(
-                        selected = task.mark == Mark.Failed,
-                        mark = Mark.Failed,
+                        selected = taskEntity.markType == MarkType.Failed,
+                        markType = MarkType.Failed,
                         label = "Failed",
                         color = Color(0xFFB00020),
-                        onClick = remember(task, onMarkChange) { { onMarkChange(task.copy(mark = Mark.Failed)) } }
+                        onClick = remember(taskEntity, onMarkChange) { { onMarkChange(taskEntity.copy(markType = MarkType.Failed)) } }
                     )
                 }
             }
@@ -328,7 +340,7 @@ fun TaskIconToggleButtons(
 @Composable
 fun StatusButton(
     selected: Boolean,
-    mark: Mark,
+    markType: MarkType,
     label: String,
     color: Color,
     onClick: () -> Unit
@@ -343,7 +355,7 @@ fun StatusButton(
         // Only the selected toggle button animates; the rest render statically,
         // which cuts each list row from 5 concurrent infinite AVD animators down to 1-2.
         StatusIcon(
-            mark = mark,
+            markType = markType,
             animate = selected,
             modifier = Modifier.size(22.dp)
         )

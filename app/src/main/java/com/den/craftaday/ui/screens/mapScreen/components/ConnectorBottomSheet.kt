@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
@@ -26,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.den.craftaday.backend.dataStructure.ConnectorType
+import com.den.craftaday.backend.entities.types.ConnectorType
 import com.den.craftaday.backend.viewModels.MapViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -101,7 +102,7 @@ fun ConnectorBottomSheet(
                                 )
                             }
                         },
-                        colors = androidx.compose.material3.ListItemDefaults.colors(
+                        colors = ListItemDefaults.colors(
                             containerColor = Color.Transparent
                         )
                     )

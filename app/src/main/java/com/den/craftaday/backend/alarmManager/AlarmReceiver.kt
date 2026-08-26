@@ -11,8 +11,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.den.craftaday.MainActivity
 import com.den.craftaday.R
-import com.den.craftaday.backend.blueprints.DataStorage
-import com.den.craftaday.backend.blueprints.AccountService
+import com.den.craftaday.backend.repositories.services.DataStorageService
+import com.den.craftaday.backend.repositories.services.AccountService
 import com.den.craftaday.helper.ReminderUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
@@ -28,7 +28,7 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     @Inject
-    lateinit var dataStorage: DataStorage
+    lateinit var dataStorageService: DataStorageService
 
     @Inject
     lateinit var accountService: AccountService
@@ -67,7 +67,7 @@ class AlarmReceiver : BroadcastReceiver() {
         scope.launch {
             try {
                 // Fetch nodes for this map
-                val nodesFlow = dataStorage.getMapNodes(userId, collectionId, mapId)
+                val nodesFlow = dataStorageService.getMapNodes(userId, collectionId, mapId)
                 val allNodes = nodesFlow.first()
                 val targetNode = allNodes.find { it.id == nodeId }
 
@@ -76,14 +76,14 @@ class AlarmReceiver : BroadcastReceiver() {
                         Log.d("AlarmReceiver", "Node $nodeId is not completed. Marking as FAILED and incrementing stats.")
                         
                         // Increment failureCount
-                        dataStorage.incrementUserStats(userId, isSuccess = false)
+                        dataStorageService.incrementUserStats(userId, isSuccess = false)
 
                         if (targetNode.alarmRepeat != "NONE" && targetNode.remainder != null) {
                             val nextTimestamp = ReminderUtils.calculateNextTimestamp(targetNode.remainder!!, targetNode.alarmRepeat)
                             Log.d("AlarmReceiver", "Rescheduling recurring node $nodeId for $nextTimestamp")
                             
-                            // Reset recurring task for the next cycle
-                            dataStorage.updateMapNodeFields(
+                            // TaskAlarmType recurring task for the next cycle
+                            dataStorageService.updateMapNodeFields(
                                 userId,
                                 collectionId,
                                 mapId, 
@@ -106,7 +106,7 @@ class AlarmReceiver : BroadcastReceiver() {
                             )
                         } else {
                             // Update node status to FAILED
-                            dataStorage.updateMapNodeFields(
+                            dataStorageService.updateMapNodeFields(
                                 userId,
                                 collectionId,
                                 mapId, 
@@ -115,7 +115,7 @@ class AlarmReceiver : BroadcastReceiver() {
                             )
                         }
                     } else {
-                        Log.d("AlarmReceiver", "Node $nodeId was already COMPLETED. No action taken.")
+                        Log.d("AlarmReceiver", "Node $nodeId was already COMPLETED. SpecificWeekDay action taken.")
                     }
                 } else {
                     Log.e("AlarmReceiver", "Target node $nodeId not found in map $mapId")
@@ -132,8 +132,8 @@ class AlarmReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         scope.launch {
             try {
-                dataStorage.incrementUserStats(userId, isSuccess = true)
-                dataStorage.updateMapNodeFields(
+                dataStorageService.incrementUserStats(userId, isSuccess = true)
+                dataStorageService.updateMapNodeFields(
                     userId,
                     collectionId,
                     mapId,
@@ -156,8 +156,8 @@ class AlarmReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         scope.launch {
             try {
-                dataStorage.incrementUserStats(userId, isSuccess = false)
-                dataStorage.updateMapNodeFields(
+                dataStorageService.incrementUserStats(userId, isSuccess = false)
+                dataStorageService.updateMapNodeFields(
                     userId,
                     collectionId,
                     mapId,
@@ -231,8 +231,8 @@ class AlarmReceiver : BroadcastReceiver() {
             .setSound(soundUri)
             .setVibrate(longArrayOf(0, 500, 200, 500))
             .setContentIntent(pendingIntent)
-            .addAction(R.drawable.menu_icon, "Mark as Done", donePendingIntent)
-            .addAction(R.drawable.menu_icon, "Mark as Failed", failedPendingIntent)
+            .addAction(R.drawable.menu_icon, "MarkType as Done", donePendingIntent)
+            .addAction(R.drawable.menu_icon, "MarkType as Failed", failedPendingIntent)
             .setAutoCancel(true)
 
         with(NotificationManagerCompat.from(context)) {

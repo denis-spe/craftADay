@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -27,11 +28,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
-import com.den.craftaday.backend.dataStructure.Task
+import com.den.craftaday.backend.entities.TaskEntity
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.HomeViewModel
+import com.den.craftaday.ui.screens.components.AddCollectionDialog
 import com.den.craftaday.ui.screens.components.AddMapDialog
 import com.den.craftaday.ui.screens.components.AddTaskDialog
+import com.den.craftaday.ui.screens.screenManager.SettingsRouter
 import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -49,6 +52,7 @@ fun HomeScreen(
     val selectedDayState = remember { mutableIntStateOf(localDateState.value.dayOfMonth) }
     val showTaskDialogState = remember { mutableStateOf(false) }
     val showMapDialogState = remember { mutableStateOf(false) }
+    val showCollectionDialogState = remember { mutableStateOf(false) }
 
 
     Scaffold(
@@ -60,6 +64,9 @@ fun HomeScreen(
         bottomBar = {
             HomeBottomNavigation(
                 selectedTab = selectedTaskOrMapState.intValue,
+                onHomeBtnClick = {
+                    backStack.add(SettingsRouter)
+                },
                 onTaskBtnClick = {
                     selectedTaskOrMapState.intValue = 0
                 },
@@ -92,28 +99,30 @@ fun HomeScreen(
 
                 is DataState.Success -> {
                     val collections = state.data
-                    if (collections.isEmpty()) {
-                        EmptyCollectionList()
-                    } else {
 
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Top,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (collections.isNotEmpty()) {
                             collectionIdState.value = state.data[selectedTabState.intValue].id
+                        }
 
-                            CollectionsList(
-                                collections,
-                                selectedTab = selectedTabState.intValue,
-                                onAddCollection = {
-
-                                }
-                            ) { selectedTab, collectionId ->
-                                selectedTabState.intValue = selectedTab
-                                collectionIdState.value = collectionId
+                        CollectionsList(
+                            collections,
+                            selectedTab = selectedTabState.intValue,
+                            onAddCollection = {
+                                showCollectionDialogState.value = true
                             }
+                        ) { selectedTab, collectionId ->
+                            selectedTabState.intValue = selectedTab
+                            collectionIdState.value = collectionId
+                        }
 
+                        if (collections.isEmpty()) {
+                            EmptyCollectionList()
+                        } else {
                             TaskAndMapList(
                                 collectionId = state.data[selectedTabState.intValue].id,
                                 backStack = backStack,
@@ -133,7 +142,7 @@ fun HomeScreen(
             onConfirm = { title, description ->
                 homeViewModel.addTaskData (
                     collectionIdState.value,
-                    task = Task(
+                    taskEntity = TaskEntity(
                         collectionId = collectionIdState.value,
                         title = title,
                         description = description
@@ -155,6 +164,18 @@ fun HomeScreen(
                 )
 
                 showMapDialogState.value = false
+            }
+        )
+    }
+
+    if (showCollectionDialogState.value) {
+        AddCollectionDialog(
+            onDismiss = { showCollectionDialogState.value = false },
+            onConfirm = { title, description ->
+                homeViewModel.addCollection(
+                    title,
+                )
+                showCollectionDialogState.value = false
             }
         )
     }
@@ -256,12 +277,10 @@ fun HomeBottomNavigation(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (selectedTab == 0)
-                            Icons.Default.AddTask
-                        else Icons.Default.LibraryAdd,
+                        painter = painterResource(id = com.den.craftaday.R.drawable.ic_plus_3d),
                         contentDescription = null,
                         modifier = Modifier.size(iconSize),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = Color.Unspecified
                     )
                 }
             }

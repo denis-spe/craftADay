@@ -16,7 +16,7 @@ import androidx.credentials.PublicKeyCredential
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.NoCredentialException
-import com.den.craftaday.backend.blueprints.AccountService
+import com.den.craftaday.backend.repositories.services.AccountService
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.helper.toTitle
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption

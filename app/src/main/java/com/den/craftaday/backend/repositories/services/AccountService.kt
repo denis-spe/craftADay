@@ -1,4 +1,4 @@
-package com.den.craftaday.backend.blueprints
+package com.den.craftaday.backend.repositories.services
 
 import android.content.Context
 import com.den.craftaday.backend.states.AuthState

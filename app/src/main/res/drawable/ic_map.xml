@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Depth layer -->
+    <path
+        android:pathData="M20.5,3l-0.16,0.03L15,5.1L9,3L3.36,4.9C3.15,4.97 3,5.15 3,5.38V20.5c0,0.28 0.22,0.5 0.5,0.5l0.16,-0.03L9,18.9l6,2.1l5.64,-1.9c0.21,-0.07 0.36,-0.25 0.36,-0.48V3.5c0,-0.28 -0.22,-0.5 -0.5,-0.5z"
+        android:fillColor="#000000"
+        android:fillAlpha="0.15"/>
+    <!-- Front layer -->
+    <path
+        android:pathData="M20,2.5l-0.16,0.03L14.5,4.6L8.5,2.5L2.86,4.4C2.65,4.47 2.5,4.65 2.5,4.88v15.12c0,0.28 0.22,0.5 0.5,0.5l0.16,-0.03L8.5,18.4l6,2.1l5.64,-1.9c0.21,-0.07 0.36,-0.25 0.36,-0.48V3c0,-0.28 -0.22,-0.5 -0.5,-0.5z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="3"
+                android:startY="3"
+                android:endX="21"
+                android:endY="21"
+                android:type="linear">
+                <item android:offset="0" android:color="#FFFFFF"/>
+                <item android:offset="1" android:color="#D1D1D1"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Map folds -->
+    <path
+        android:pathData="M14.5,18.5l-6,-2.11V4.5l6,2.11V18.5z"
+        android:fillColor="#757575"
+        android:fillAlpha="0.3"/>
+</vector>
