@@ -72,4 +72,5 @@ interface DataStorageService {
     
     fun addCollection(userId: String, collection: ListCollectionEntity)
     fun getAllCollections(userId: String): Flow<List<ListCollectionEntity>>
+    fun getTask(userId: String, collectionId: String, taskId: String): Flow<TaskEntity?>
 }

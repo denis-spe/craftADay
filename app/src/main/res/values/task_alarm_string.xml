@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_task_alarm">com.den.craftaday.ACTION_TASK_ALARM</string>
+    <string name="action_task_done">com.den.craftaday.ACTION_TASK_DONE</string>
+    <string name="action_task_failed">com.den.craftaday.ACTION_TASK_FAILED</string>
+</resources>

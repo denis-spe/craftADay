@@ -55,6 +55,24 @@ class DataStorageServiceRepo(
             }
         }
 
+    /**
+     * Get a single task by ID
+     * @param userId The user ID
+     * @param collectionId The collection ID
+     * @param taskId The task ID
+     * @return A Flow of TaskEntity
+     */
+    override fun getTask(userId: String, collectionId: String, taskId: String) = docRef
+        .document(userId)
+        .collection(COLLECTION)
+        .document(collectionId)
+        .collection(TASKS_COLLECTION)
+        .document(taskId)
+        .snapshots()
+        .map { snapshot ->
+            snapshot.toTask()
+        }
+
     private fun DocumentSnapshot.toTask(): TaskEntity? {
         return try {
             val markTypeStr = getString("markType") ?: MarkType.Initial.name

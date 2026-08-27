@@ -8,9 +8,6 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import com.den.craftaday.backend.entities.TaskEntity
-import com.den.craftaday.helper.toLocalTimeDate
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.model.Values.timestamp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,6 +30,7 @@ class TaskAlarmManager @Inject constructor(
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             action = ACTION_TASK_REMINDER
             putExtra("collectionId", task.collectionId)
+            putExtra("taskId", task.id)
         }
 
         // Use taskId.hashCode() as a unique request code for each task

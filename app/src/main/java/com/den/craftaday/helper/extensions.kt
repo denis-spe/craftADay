@@ -1,6 +1,7 @@
 // Glory be to name of LORD GOD of host
 package com.den.craftaday.helper
 
+import java.time.LocalTime
 import java.util.Locale
 
 /**
@@ -10,33 +11,35 @@ val String.toTitle: String get() {
     return this.replaceFirstChar { it.uppercase() }
 }
 
-val Long.toLocalTimeDate: String get() {
+val Long.toLocalTimeDateFormat: String get() {
     val date = java.util.Date(this)
     val format = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",
         java.util.Locale.getDefault())
     return format.format(date)
 }
 
-val Long.toLocalDate: String get() {
+val Long.toLocalDateFormat: String get() {
     val date = java.util.Date(this)
     val format = java.text.SimpleDateFormat("yyyy-MM-dd",
         java.util.Locale.getDefault())
     return format.format(date)
 }
 
-val Long.toLocalTime: String get() {
+val Long.toLocalTimeFormat: String get() {
     val date = java.util.Date(this)
-    val format = java.text.SimpleDateFormat("HH:mm:ss",
-        java.util.Locale.getDefault())
+    val format = java.text.SimpleDateFormat(
+        "HH:mm:ss",
+        java.util.Locale.getDefault()
+    )
     return format.format(date)
 }
 
-val Long.toMinutes: String get() {
+val Long.toMinutesFormat: String get() {
     val minutes = this / 1000 / 60
     return String.format(Locale.getDefault(), "%02d", minutes)
 }
 
-val Long.toHours: String get() {
+val Long.toHoursFormat: String get() {
     val hours = this / 1000 / 60 / 60
     return String.format(Locale.getDefault(), "%02d", hours)
 }

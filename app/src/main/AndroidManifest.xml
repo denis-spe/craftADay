@@ -35,9 +35,31 @@
         </receiver>
 
         <receiver
+            android:enabled="true"
+            android:exported="false"
+            android:name=".backend.alarmManager.TaskAlarmReceiver"
+            >
+            <intent-filter>
+                <action android:name="@string/action_task_alarm" />
+                <action android:name="@string/action_task_done" />
+                <action android:name="@string/action_task_failed" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".backend.alarmManager.TaskBootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name=".backend.alarmManager.BootReceiver"
             android:enabled="true"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />

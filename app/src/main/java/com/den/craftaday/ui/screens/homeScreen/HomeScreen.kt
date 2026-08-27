@@ -1,43 +1,58 @@
 // Bless be to name of LORD GOD of hosts
 package com.den.craftaday.ui.screens.homeScreen
 
-import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.FilterAltOff
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.TaskAlt
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
-import com.den.craftaday.backend.entities.TaskEntity
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.HomeViewModel
+import com.den.craftaday.backend.viewModels.TaskDataAdditionViewModel
 import com.den.craftaday.ui.screens.components.AddCollectionDialog
 import com.den.craftaday.ui.screens.components.AddMapDialog
-import com.den.craftaday.ui.screens.components.AddTaskDialog
+import com.den.craftaday.ui.screens.dataAddition.TaskDataAddition
 import com.den.craftaday.ui.screens.screenManager.SettingsRouter
 import java.time.LocalDate
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -50,9 +65,12 @@ fun HomeScreen(
     val collectionIdState = remember { mutableStateOf("") }
     val selectedTaskOrMapState = remember { mutableIntStateOf(0) }
     val selectedDayState = remember { mutableIntStateOf(localDateState.value.dayOfMonth) }
-    val showTaskDialogState = remember { mutableStateOf(false) }
+    val showTaskSheetState = remember { mutableStateOf(false) }
     val showMapDialogState = remember { mutableStateOf(false) }
     val showCollectionDialogState = remember { mutableStateOf(false) }
+
+    // Instantiate the view model
+    val taskDataAdditionViewModel: TaskDataAdditionViewModel = hiltViewModel()
 
 
     Scaffold(
@@ -75,7 +93,7 @@ fun HomeScreen(
                 },
                 onAddBtnClick = {
                     if (selectedTaskOrMapState.intValue == 0) {
-                        showTaskDialogState.value = true
+                        taskDataAdditionViewModel.updateShowForm(true)
                     } else {
                         showMapDialogState.value = true
                     }
@@ -136,21 +154,13 @@ fun HomeScreen(
         }
     }
 
-    if (showTaskDialogState.value) {
-        AddTaskDialog(
-            onDismiss = { showTaskDialogState.value = false },
-            onConfirm = { title, description ->
-                homeViewModel.addTaskData (
-                    collectionIdState.value,
-                    taskEntity = TaskEntity(
-                        collectionId = collectionIdState.value,
-                        title = title,
-                        description = description
-                    )
-                )
-                showTaskDialogState.value = false
-            }
-        )
+    // Show the task data addition sheet
+    TaskDataAddition(
+        viewModel = taskDataAdditionViewModel,
+        collectionId = collectionIdState.value
+    ) {
+        // Close the sheet
+        taskDataAdditionViewModel.updateShowForm(false)
     }
 
     if (showMapDialogState.value) {

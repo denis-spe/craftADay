@@ -1,20 +1,26 @@
 // Glory be to the name of the LORD of host
 package com.den.craftaday.backend.useCase
 
+import com.den.craftaday.backend.alarmManager.TaskAlarmManager
 import com.den.craftaday.backend.repositories.services.AccountService
 import com.den.craftaday.backend.repositories.services.DataStorageService
 import com.den.craftaday.backend.entities.TaskEntity
+import com.den.craftaday.backend.entities.types.MarkType
 import javax.inject.Inject
 
 
 class TaskUseCase @Inject constructor(
     private val dataStorageService: DataStorageService,
-    private val accountService: AccountService
+    private val accountService: AccountService,
+    private val taskAlarmManager: TaskAlarmManager
 ) {
     private val userId get() = accountService.currentUserId
 
     fun addTask(collectionId: String, taskEntity: TaskEntity) {
         dataStorageService.addTask(userId = userId, collectionId = collectionId, taskEntity = taskEntity)
+
+        // Schedule alarm
+        taskAlarmManager.scheduleAlarm(taskEntity)
     }
 
     fun getAllTasks() = dataStorageService.getAllDatasets(userId = userId)
