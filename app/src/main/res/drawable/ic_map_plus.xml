@@ -29,4 +29,25 @@
         android:pathData="M28,36.8l-12,-4.2V9.2l12,4.2V36.8z"
         android:fillColor="#000000"
         android:fillAlpha="0.2"/>
+
+    <!-- Plus Badge Shadow -->
+    <path
+        android:pathData="M44,35c0,5.52 -4.48,10 -10,10s-10,-4.48 -10,-10s4.48,-10 10,-10s10,4.48 10,10z"
+        android:fillColor="#000000"
+        android:fillAlpha="0.1"/>
+
+    <!-- Plus Badge Side -->
+    <path
+        android:pathData="M43,34c0,5.52 -4.48,10 -10,10s-10,-4.48 -10,-10s4.48,-10 10,-10s10,4.48 10,10z"
+        android:fillColor="#212121"/>
+
+    <!-- Plus Badge Front -->
+    <path
+        android:pathData="M42,33c0,5.52 -4.48,10 -10,10s-10,-4.48 -10,-10s4.48,-10 10,-10s10,4.48 10,10z"
+        android:fillColor="?attr/colorPrimary"/>
+
+    <!-- Plus Symbol -->
+    <path
+        android:pathData="M37,34h-4v4h-2v-4h-4v-2h4v-4h2v4h4v2z"
+        android:fillColor="#FFFFFF"/>
 </vector>

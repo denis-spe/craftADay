@@ -28,6 +28,7 @@ class MapUseCase @Inject constructor(
         dataStorageService.updateMap(userId, collectionId = collectionId, map = map)
     }
 
+
     fun getAllMaps() = dataStorageService.getAllMaps(userId)
     
     fun getMapsInCollection(collectionId: String) = dataStorageService.getMapsInCollection(userId, collectionId)
@@ -57,5 +58,4 @@ class MapUseCase @Inject constructor(
     }
     
     fun getAllCollections() = dataStorageService.getAllCollections(userId)
-    fun addCollection(collection: ListCollectionEntity) = dataStorageService.addCollection(userId, collection)
 }

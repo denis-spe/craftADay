@@ -7,7 +7,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
-import com.den.craftaday.backend.viewModels.HomeViewModel
+import com.den.craftaday.backend.viewModels.DataFetchViewModel
+import com.den.craftaday.backend.viewModels.TaskViewModel
 import com.den.craftaday.ui.screens.homeScreen.mapList.MapList
 import com.den.craftaday.ui.screens.homeScreen.taskList.TaskList
 import com.den.craftaday.ui.screens.screenManager.MapRouter
@@ -17,12 +18,14 @@ import com.den.craftaday.ui.screens.screenManager.MapRouter
 fun TaskAndMapList(
     collectionId: String,
     backStack: NavBackStack<NavKey>,
-    homeViewModel: HomeViewModel,
-    selectedTab: Int
+    selectedTab: Int,
+    taskViewModel: TaskViewModel,
+    dataFetchViewModel: DataFetchViewModel,
 ) {
     LaunchedEffect(collectionId) {
         if (collectionId.isNotEmpty() && collectionId.isNotBlank()) {
-            homeViewModel.setCollectionId(collectionId)
+            dataFetchViewModel.setCollectionId(collectionId)
+            taskViewModel.setCollectionId(collectionId)
         }
     }
 
@@ -31,11 +34,13 @@ fun TaskAndMapList(
         if (collectionId.isNotEmpty() && collectionId.isNotBlank()) {
             when (selectedTab) {
                 0 -> TaskList(
-                    homeViewModel = homeViewModel,
-                    onMarkClick = remember(homeViewModel) { homeViewModel::onMarkClick }
+                    dataFetchViewModel = dataFetchViewModel,
+                    onMarkClick = remember(taskViewModel) {
+                        taskViewModel::onMarkClick
+                    }
                 )
 
-                1 -> MapList(homeViewModel) { mapId ->
+                1 -> MapList(dataFetchViewModel = dataFetchViewModel) { mapId ->
                     backStack.add(MapRouter(collectionId, mapId))
                 }
             }

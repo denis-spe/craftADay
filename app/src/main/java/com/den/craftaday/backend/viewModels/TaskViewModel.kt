@@ -1,11 +1,10 @@
 package com.den.craftaday.backend.viewModels
 
-import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import com.den.craftaday.backend.entities.TaskEntity
-import com.den.craftaday.backend.states.TaskForm
+import com.den.craftaday.backend.states.TaskState
 import com.den.craftaday.backend.useCase.TaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,13 +14,13 @@ import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 @HiltViewModel
-class TaskDataAdditionViewModel @Inject constructor(
+class TaskViewModel @Inject constructor(
     val taskUseCase: TaskUseCase
 ): ViewModel() {
 
     // Instantiate your data class state wrapper once
-    private val _taskState = MutableStateFlow(TaskForm())
-    val taskState: StateFlow<TaskForm> = _taskState.asStateFlow()
+    private val _taskState = MutableStateFlow(TaskState())
+    val taskState: StateFlow<TaskState> = _taskState.asStateFlow()
 
     // Leverage derivedStateOf to read directly through the data class properties
     val isTaskFormValid by derivedStateOf {
@@ -57,4 +56,15 @@ class TaskDataAdditionViewModel @Inject constructor(
     }
 
     fun updateShowForm(showForm: Boolean) = _taskState.update { it.copy(showForm = showForm) }
+
+    /**
+     * Update the taskEntity markType
+     * @param taskEntity The taskEntity to update
+     */
+    fun onMarkClick(taskEntity: TaskEntity) {
+        taskUseCase.updateTask(
+            _taskState.value.collectionId,
+            taskEntity
+        )
+    }
 }

@@ -50,16 +50,17 @@ import com.den.craftaday.backend.entities.types.MarkType
 import com.den.craftaday.backend.entities.types.TaskAlarmType
 import com.den.craftaday.backend.entities.TaskEntity
 import com.den.craftaday.backend.states.DataState
+import com.den.craftaday.backend.viewModels.DataFetchViewModel
 import com.den.craftaday.backend.viewModels.HomeViewModel
 import com.den.craftaday.helper.CurrentTimeChange
 import com.den.craftaday.helper.TimeChange
 
 @Composable
 fun TaskList(
-    homeViewModel: HomeViewModel,
+    dataFetchViewModel: DataFetchViewModel,
     onMarkClick: (taskEntity: TaskEntity) -> Unit
 ) {
-    val state by homeViewModel.tasksInCollection.collectAsStateWithLifecycle()
+    val state by dataFetchViewModel.tasksInCollection.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (state) {

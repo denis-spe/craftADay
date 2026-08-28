@@ -24,6 +24,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.getSelectedDate
@@ -60,6 +63,63 @@ fun TaskDescriptionField(
     state: TextFieldState
 ) {
     OutlinedTextField(
+        state = state,
+        label = { Text("Description") },
+        modifier = modifier,
+        lineLimits = TextFieldLineLimits.MultiLine(),
+        inputTransformation = InputTransformation.maxLength(1000)
+    )
+}
+
+@Composable
+fun CollectionTextField(
+    modifier: Modifier = Modifier,
+    state: TextFieldState
+) {
+    OutlinedTextField(
+        state = state,
+        label = { Text("Collection") },
+        modifier = modifier.fillMaxWidth(),
+        lineLimits = TextFieldLineLimits.SingleLine,
+        labelPosition = TextFieldLabelPosition.Above(),
+        inputTransformation = InputTransformation.maxLength(100)
+    )
+}
+
+@Composable
+fun CollectionDescriptionField(
+    modifier: Modifier = Modifier,
+    state: TextFieldState
+) {
+    OutlinedTextField(
+        state = state,
+        label = { Text("Description") },
+        modifier = modifier,
+        lineLimits = TextFieldLineLimits.MultiLine(),
+        inputTransformation = InputTransformation.maxLength(1000)
+    )
+}
+
+@Composable
+fun MapTextField(
+    modifier: Modifier = Modifier,
+    state: TextFieldState
+) {
+    TextField(
+        state = state,
+        label = { Text("Map") },
+        modifier = modifier.fillMaxWidth(),
+        lineLimits = TextFieldLineLimits.SingleLine,
+        inputTransformation = InputTransformation.maxLength(100)
+    )
+}
+
+@Composable
+fun MapDescriptionField(
+    modifier: Modifier = Modifier,
+    state: TextFieldState
+) {
+    TextField(
         state = state,
         label = { Text("Description") },
         modifier = modifier,

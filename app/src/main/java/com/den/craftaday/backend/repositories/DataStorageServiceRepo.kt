@@ -119,8 +119,8 @@ class DataStorageServiceRepo(
     ) {
          val taskRef = docRef.document(userId)
              .collection(COLLECTION)
-            .document(collectionId)
-            .collection(TASKS_COLLECTION)
+             .document(collectionId)
+             .collection(TASKS_COLLECTION)
              .document()
 
         val taskCopy = taskEntity.copy(id = taskRef.id)
@@ -138,6 +138,7 @@ class DataStorageServiceRepo(
         collectionId: String,
         taskEntity: TaskEntity
     ) {
+        Log.w(TAG, "Deleting taskEntity: $taskEntity")
         docRef.document(userId)
             .collection(COLLECTION)
             .document(collectionId)
@@ -151,6 +152,8 @@ class DataStorageServiceRepo(
         collectionId: String,
         taskEntity: TaskEntity
     ) {
+        Log.w(TAG, "Updating taskEntity Id: ${taskEntity.id} collectionId: $collectionId")
+
         docRef.document(userId)
             .collection(COLLECTION)
             .document(collectionId)

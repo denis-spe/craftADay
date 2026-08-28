@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,28 +27,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.den.craftaday.backend.states.TaskState
-import com.den.craftaday.backend.viewModels.TaskViewModel
+import com.den.craftaday.backend.entities.ListCollectionEntity
+import com.den.craftaday.backend.entities.MapEntity
+import com.den.craftaday.backend.states.CollectionState
+import com.den.craftaday.backend.states.MapState
+import com.den.craftaday.backend.viewModels.CollectionViewModel
+import com.den.craftaday.backend.viewModels.MapViewModel
+import com.den.craftaday.ui.screens.components.MapDescriptionField
+import com.den.craftaday.ui.screens.components.MapTextField
 import com.den.craftaday.ui.screens.components.TaskDescriptionField
 import com.den.craftaday.ui.screens.components.TaskTextField
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskDataAddition(taskViewModel: TaskViewModel, collectionId: String) {
-    val state = taskViewModel.taskState.collectAsStateWithLifecycle()
+fun MapDataAddition(mapViewModel: MapViewModel, collectionId: String) {
+    val state = mapViewModel.mapState.collectAsStateWithLifecycle()
 
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
 
     LaunchedEffect(collectionId) {
-        taskViewModel.setCollectionId(collectionId)
+        mapViewModel.setCollectionId(collectionId)
     }
 
     if (state.value.showForm) {
         ModalBottomSheet(
             sheetState = sheetState,
-            onDismissRequest = { taskViewModel.updateShowForm(false) },
+            onDismissRequest = { mapViewModel.updateShowForm(false) },
             dragHandle = {}
         ) {
             Box(
@@ -61,13 +69,13 @@ fun TaskDataAddition(taskViewModel: TaskViewModel, collectionId: String) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
 
-                        TaskAdditionHeader(
-                            onDismiss = { taskViewModel.updateShowForm(false) }
+                        MapAdditionHeader(
+                            onDismiss = { mapViewModel.updateShowForm(false) }
                         )
 
-                        TaskAdditionForm(
+                        MapAdditionForm(
                             state = state,
-                            onSubmit = taskViewModel::addTaskData
+                            onSubmit = mapViewModel::addMap
                         )
                     }
                 }
@@ -77,16 +85,14 @@ fun TaskDataAddition(taskViewModel: TaskViewModel, collectionId: String) {
 }
 
 @Composable
-fun TaskAdditionHeader(
-    onDismiss: () -> Unit
-) {
+private fun MapAdditionHeader(onDismiss: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = "Add Task",
+            text = "Add Map",
             modifier = Modifier.padding(bottom = 16.dp),
             style = MaterialTheme.typography.titleLarge
         )
@@ -102,19 +108,21 @@ fun TaskAdditionHeader(
 }
 
 @Composable
-private fun TaskAdditionForm(state: State<TaskState>, onSubmit: () -> Unit) {
-
+private fun MapAdditionForm(
+    state: State<MapState>,
+    onSubmit: () -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        TaskTextField(
+        MapTextField(
             state = state.value.title,
             modifier = Modifier.fillMaxWidth()
         )
 
-        TaskDescriptionField(
+        MapDescriptionField(
             state = state.value.description,
             modifier = Modifier.fillMaxWidth()
         )
@@ -127,10 +135,10 @@ private fun TaskAdditionForm(state: State<TaskState>, onSubmit: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.AddTask,
-                    contentDescription = "Add Task"
+                    imageVector = Icons.Default.Map,
+                    contentDescription = "Add Map"
                 )
-                Text("Add Task")
+                Text("Add Map")
             }
         }
     }

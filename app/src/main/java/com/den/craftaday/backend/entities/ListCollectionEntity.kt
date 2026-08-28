@@ -6,5 +6,6 @@ import androidx.compose.runtime.Immutable
 data class ListCollectionEntity(
     val id: String = "",
     val name: String = "",
-    val createdAt: Long = 0L,
+    val description: String = "",
+    val createdAt: Long = System.currentTimeMillis(),
 )

@@ -5,6 +5,8 @@
         <!-- Customize your theme here. -->
         <item name="android:windowBackground">@color/app_start_color</item>
         <item name="android:statusBarColor">@color/app_start_color</item>
+        <item name="colorPrimary">@color/app_start_color</item>
+        <item name="android:colorPrimary">@color/app_start_color</item>
     </style>
 
     <!-- Splash Screen theme. -->

@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,33 +21,32 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.den.craftaday.backend.states.TaskState
-import com.den.craftaday.backend.viewModels.TaskViewModel
+import com.den.craftaday.backend.states.CollectionState
+import com.den.craftaday.backend.viewModels.CollectionViewModel
+import androidx.compose.runtime.State
+import com.den.craftaday.backend.entities.ListCollectionEntity
+import com.den.craftaday.ui.screens.components.CollectionDescriptionField
+import com.den.craftaday.ui.screens.components.CollectionTextField
 import com.den.craftaday.ui.screens.components.TaskDescriptionField
 import com.den.craftaday.ui.screens.components.TaskTextField
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskDataAddition(taskViewModel: TaskViewModel, collectionId: String) {
-    val state = taskViewModel.taskState.collectAsStateWithLifecycle()
+fun CollectionDataAddition(collectionViewModel: CollectionViewModel) {
+    val state = collectionViewModel.collectionState.collectAsStateWithLifecycle()
 
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
 
-    LaunchedEffect(collectionId) {
-        taskViewModel.setCollectionId(collectionId)
-    }
-
     if (state.value.showForm) {
         ModalBottomSheet(
             sheetState = sheetState,
-            onDismissRequest = { taskViewModel.updateShowForm(false) },
+            onDismissRequest = { collectionViewModel.updateShowForm(false) },
             dragHandle = {}
         ) {
             Box(
@@ -61,13 +60,13 @@ fun TaskDataAddition(taskViewModel: TaskViewModel, collectionId: String) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
 
-                        TaskAdditionHeader(
-                            onDismiss = { taskViewModel.updateShowForm(false) }
+                        CollectionAdditionHeader(
+                            onDismiss = { collectionViewModel.updateShowForm(false) }
                         )
 
-                        TaskAdditionForm(
+                        CollectionAdditionForm(
                             state = state,
-                            onSubmit = taskViewModel::addTaskData
+                            onSubmit = collectionViewModel::addCollection
                         )
                     }
                 }
@@ -77,16 +76,14 @@ fun TaskDataAddition(taskViewModel: TaskViewModel, collectionId: String) {
 }
 
 @Composable
-fun TaskAdditionHeader(
-    onDismiss: () -> Unit
-) {
+private fun CollectionAdditionHeader(onDismiss: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = "Add Task",
+            text = "Add Collection",
             modifier = Modifier.padding(bottom = 16.dp),
             style = MaterialTheme.typography.titleLarge
         )
@@ -102,19 +99,21 @@ fun TaskAdditionHeader(
 }
 
 @Composable
-private fun TaskAdditionForm(state: State<TaskState>, onSubmit: () -> Unit) {
-
+private fun CollectionAdditionForm(
+    state: State<CollectionState>,
+    onSubmit: () -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        TaskTextField(
-            state = state.value.title,
+        CollectionTextField(
+            state = state.value.name,
             modifier = Modifier.fillMaxWidth()
         )
 
-        TaskDescriptionField(
+        CollectionDescriptionField(
             state = state.value.description,
             modifier = Modifier.fillMaxWidth()
         )
@@ -127,10 +126,10 @@ private fun TaskAdditionForm(state: State<TaskState>, onSubmit: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.AddTask,
-                    contentDescription = "Add Task"
+                    imageVector = Icons.Default.Map,
+                    contentDescription = "Add Collection"
                 )
-                Text("Add Task")
+                Text("Add Collection")
             }
         }
     }

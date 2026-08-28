@@ -1,11 +1,13 @@
 package com.den.craftaday.backend.states
 
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.Immutable
 import com.den.craftaday.R
 import com.den.craftaday.backend.entities.types.TaskAlarmType
 
 
-data class TaskForm(
+@Immutable
+data class TaskState(
     val collectionId: String = "",
     val showForm: Boolean = false,
     val title: TextFieldState = TextFieldState(),

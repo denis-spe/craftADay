@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
@@ -35,6 +36,7 @@ fun MapTopBar(
     currentLayoutType: LayoutType,
     scale: MutableState<Float>,
     onRecenter: () -> Unit,
+    onBackClick: () -> Unit,
     currentConnectorType: ConnectorType
 ) {
     TopAppBar(
@@ -54,6 +56,11 @@ fun MapTopBar(
                     color = Color.Gray
                 )
             }},
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.Default.ArrowBackIosNew, contentDescription = "TaskAlarmType View")
+            }
+        },
         actions = {
             Surface(
                 color = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),

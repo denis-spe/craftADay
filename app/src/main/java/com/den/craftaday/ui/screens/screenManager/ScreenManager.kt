@@ -124,7 +124,8 @@ fun EntryProviderScope<NavKey>.featureAEntryBuilder(
         MapScreen(
             collectionId = it.collectionId,
             mapId = it.mapId,
-            viewModel = mapViewModel
+            viewModel = mapViewModel,
+            backStack = backStack
         )
     }
 }

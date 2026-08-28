@@ -64,10 +64,13 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.core.graphics.toColorInt
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
 import com.den.craftaday.ui.screens.mapScreen.components.MapFloatingButton
 import com.den.craftaday.ui.screens.mapScreen.components.MapTopBar
 import com.den.craftaday.ui.screens.mapScreen.components.LayoutBottomSheet
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 /** dp-space anchor points for the connector between a parent and a child node. */
 private data class ConnectorAnchors(
@@ -183,6 +186,7 @@ private fun recenter(
 fun MapScreen(
     collectionId: String,
     mapId: String,
+    backStack: NavBackStack<NavKey>,
     viewModel: MapViewModel
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -272,7 +276,7 @@ fun MapScreen(
             showZoomIndicator = true
         } else {
             // Keep visible for a bit after transform ends
-            delay(1500)
+            delay(1500.milliseconds)
             showZoomIndicator = false
         }
     }
@@ -299,6 +303,9 @@ fun MapScreen(
                 currentLayoutType = currentLayoutType,
                 currentConnectorType = currentConnectorType,
                 scale = scale,
+                onBackClick = {
+                    backStack.removeLastOrNull()
+                },
                 onRecenter = {
                     if (nodesState is DataState.Success) {
                         val nodes = (nodesState as DataState.Success).data

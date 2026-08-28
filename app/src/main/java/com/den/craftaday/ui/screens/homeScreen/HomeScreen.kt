@@ -1,6 +1,7 @@
 // Bless be to name of LORD GOD of hosts
 package com.den.craftaday.ui.screens.homeScreen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,12 +15,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.FilterAltOff
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,10 +49,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import com.den.craftaday.backend.states.DataState
+import com.den.craftaday.backend.viewModels.CollectionViewModel
+import com.den.craftaday.backend.viewModels.DataFetchViewModel
 import com.den.craftaday.backend.viewModels.HomeViewModel
-import com.den.craftaday.backend.viewModels.TaskDataAdditionViewModel
+import com.den.craftaday.backend.viewModels.MapViewModel
+import com.den.craftaday.backend.viewModels.TaskViewModel
 import com.den.craftaday.ui.screens.components.AddCollectionDialog
 import com.den.craftaday.ui.screens.components.AddMapDialog
+import com.den.craftaday.ui.screens.dataAddition.CollectionDataAddition
+import com.den.craftaday.ui.screens.dataAddition.MapDataAddition
 import com.den.craftaday.ui.screens.dataAddition.TaskDataAddition
 import com.den.craftaday.ui.screens.screenManager.SettingsRouter
 import java.time.LocalDate
@@ -59,18 +68,21 @@ fun HomeScreen(
     backStack: NavBackStack<NavKey>,
     homeViewModel: HomeViewModel
 ) {
+    // Instantiate the view model
+    val taskViewModel: TaskViewModel = hiltViewModel()
+    val dataFetchViewModel = hiltViewModel<DataFetchViewModel>()
+    val mapViewModel = hiltViewModel<MapViewModel>()
+    val collectionViewModel = hiltViewModel<CollectionViewModel>()
+
+    // Fetch all the collections
+    val collectionsState by dataFetchViewModel.fetchAllCollections.collectAsStateWithLifecycle()
+
     val localDateState = remember { mutableStateOf(LocalDate.now()) }
-    val collectionsState by homeViewModel.fetchAllCollections.collectAsStateWithLifecycle()
     val selectedTabState = remember { mutableIntStateOf(0) }
     val collectionIdState = remember { mutableStateOf("") }
     val selectedTaskOrMapState = remember { mutableIntStateOf(0) }
     val selectedDayState = remember { mutableIntStateOf(localDateState.value.dayOfMonth) }
-    val showTaskSheetState = remember { mutableStateOf(false) }
-    val showMapDialogState = remember { mutableStateOf(false) }
     val showCollectionDialogState = remember { mutableStateOf(false) }
-
-    // Instantiate the view model
-    val taskDataAdditionViewModel: TaskDataAdditionViewModel = hiltViewModel()
 
 
     Scaffold(
@@ -93,9 +105,9 @@ fun HomeScreen(
                 },
                 onAddBtnClick = {
                     if (selectedTaskOrMapState.intValue == 0) {
-                        taskDataAdditionViewModel.updateShowForm(true)
+                        taskViewModel.updateShowForm(true)
                     } else {
-                        showMapDialogState.value = true
+                        mapViewModel.updateShowForm(true)
                     }
                 }
             )
@@ -131,7 +143,7 @@ fun HomeScreen(
                             collections,
                             selectedTab = selectedTabState.intValue,
                             onAddCollection = {
-                                showCollectionDialogState.value = true
+                                collectionViewModel.updateShowForm(true)
                             }
                         ) { selectedTab, collectionId ->
                             selectedTabState.intValue = selectedTab
@@ -144,7 +156,8 @@ fun HomeScreen(
                             TaskAndMapList(
                                 collectionId = state.data[selectedTabState.intValue].id,
                                 backStack = backStack,
-                                homeViewModel = homeViewModel,
+                                dataFetchViewModel = dataFetchViewModel,
+                                taskViewModel = taskViewModel,
                                 selectedTab = selectedTaskOrMapState.intValue
                             )
                         }
@@ -156,39 +169,20 @@ fun HomeScreen(
 
     // Show the task data addition sheet
     TaskDataAddition(
-        viewModel = taskDataAdditionViewModel,
+        taskViewModel = taskViewModel,
         collectionId = collectionIdState.value
-    ) {
-        // Close the sheet
-        taskDataAdditionViewModel.updateShowForm(false)
-    }
+    )
 
-    if (showMapDialogState.value) {
-        AddMapDialog(
-            onDismiss = { showMapDialogState.value = false },
-            onConfirm = { title, description ->
-                homeViewModel.addMap(
-                    collectionIdState.value,
-                    title,
-                    description
-                )
+    // Show the collection data addition sheet
+    CollectionDataAddition(
+        collectionViewModel = collectionViewModel,
+    )
 
-                showMapDialogState.value = false
-            }
-        )
-    }
-
-    if (showCollectionDialogState.value) {
-        AddCollectionDialog(
-            onDismiss = { showCollectionDialogState.value = false },
-            onConfirm = { title, description ->
-                homeViewModel.addCollection(
-                    title,
-                )
-                showCollectionDialogState.value = false
-            }
-        )
-    }
+    // Show the map data addition sheet
+    MapDataAddition(
+        mapViewModel = mapViewModel,
+        collectionId = collectionIdState.value
+    )
 }
 
 @Composable
@@ -286,12 +280,29 @@ fun HomeBottomNavigation(
                     modifier = Modifier.padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
+
                     Icon(
-                        painter = painterResource(id = com.den.craftaday.R.drawable.ic_plus_3d),
+                        imageVector = if (selectedTab == 1) Icons.Default.Map else Icons.Default.TaskAlt,
                         contentDescription = null,
                         modifier = Modifier.size(iconSize),
-                        tint = Color.Unspecified
+                        tint = MaterialTheme.colorScheme.primary
                     )
+                    Card(
+                        modifier = Modifier.align(Alignment.BottomEnd),
+                        shape = CircleShape,
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        border = CardDefaults.outlinedCardBorder(enabled = false),
+                        colors = CardDefaults.outlinedCardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 

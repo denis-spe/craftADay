@@ -36,14 +36,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.den.craftaday.backend.states.DataState
-import com.den.craftaday.backend.viewModels.HomeViewModel
+import com.den.craftaday.backend.viewModels.DataFetchViewModel
 
 @Composable
 fun MapList(
-    homeViewModel: HomeViewModel,
-    onMapClick: (String) -> Unit
+    dataFetchViewModel: DataFetchViewModel,
+    onMapClick: (String) -> Unit,
 ) {
-    val mapsState by homeViewModel.mapsInCollection.collectAsStateWithLifecycle()
+    val mapsState by dataFetchViewModel.mapsInCollection.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (mapsState) {

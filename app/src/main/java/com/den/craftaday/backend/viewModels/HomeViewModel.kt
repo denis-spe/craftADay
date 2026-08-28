@@ -92,14 +92,7 @@ class HomeViewModel @Inject constructor(
     fun updateMap(collectionId: String, map: MapEntity) = mapUseCase.updateMap(collectionId, map)
 
     // ============================ Adding Data to fire store ==========================
-    /**
-     * Add a map to a collection
-     * @param collectionId of the collection
-     * @param title of the map
-     * @param description of the map
-     */
-    fun addMap(collectionId: String, title: String, description: String) =
-        mapUseCase.addMap(collectionId, MapEntity(title = title, description = description))
+
 
     /**
      * Add a taskEntity to a collection
@@ -108,11 +101,7 @@ class HomeViewModel @Inject constructor(
      */
     fun addTaskData(collectionId: String, taskEntity: TaskEntity) = taskUseCase.addTask(collectionId, taskEntity)
 
-    /**
-     * Add a collection to the user
-     * @param name of the collection
-     */
-    fun addCollection(name: String) = mapUseCase.addCollection(ListCollectionEntity(name = name))
+
 
     //  ============================= Deleting Data from fire store =====================
 

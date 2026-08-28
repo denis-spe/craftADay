@@ -2,6 +2,8 @@
 package com.den.craftaday.backend.viewModels
 
 import android.util.Log
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.den.craftaday.backend.alarmManager.MapAlarmManager
@@ -14,6 +16,8 @@ import com.den.craftaday.backend.entities.types.LayoutType
 import com.google.firebase.Timestamp
 import com.den.craftaday.backend.states.AuthState
 import com.den.craftaday.backend.states.DataState
+import com.den.craftaday.backend.states.MapState
+import com.den.craftaday.backend.states.TaskState
 import com.den.craftaday.backend.useCase.AuthorizationUseCase
 import com.den.craftaday.backend.useCase.MapUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,6 +32,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import kotlin.math.ceil
 import kotlin.math.cos
@@ -68,21 +73,33 @@ class MapViewModel @Inject constructor(
     private val alarmManager: MapAlarmManager
 ) : ViewModel() {
 
-    private val _mapId = MutableStateFlow<String?>(null)
-    private val _collectionId = MutableStateFlow<String?>(null)
+    // Instantiate your data class state wrapper once
+    private val _mapState = MutableStateFlow(MapState())
+    val mapState: StateFlow<MapState> = _mapState.asStateFlow()
 
-    fun setMapContext(collectionId: String, mapId: String) {
-        _collectionId.value = collectionId
-        _mapId.value = mapId
+    // Leverage derivedStateOf to read directly through the data class properties
+    val isMapFormValid by derivedStateOf {
+        val state = _mapState.value
+        state.collectionId?.isNotBlank() ?: false && state.title.text.isNotBlank()
     }
 
-    val currentMap: StateFlow<DataState<MapEntity>> = _mapId
-        .flatMapLatest { mapId ->
-            val collectionId = _collectionId.value
-            if (mapId == null || collectionId == null) return@flatMapLatest emptyFlow<DataState<MapEntity>>()
+    fun setMapContext(collectionId: String, mapId: String) {
+        _mapState.update { it.copy(collectionId = collectionId, mapId = mapId) }
+    }
+
+    fun setCollectionId(collectionId: String) {
+        _mapState.update { it.copy(collectionId = collectionId) }
+    }
+
+    fun updateShowForm(showForm: Boolean) = _mapState.update { it.copy(showForm = showForm) }
+
+    val currentMap: StateFlow<DataState<MapEntity>> = _mapState
+        .flatMapLatest { state ->
+            val collectionId = state.collectionId
+            if (state.mapId == null || collectionId == null) return@flatMapLatest emptyFlow<DataState<MapEntity>>()
             authorizationUseCase.userState.flatMapLatest { authState ->
                 if (authState is AuthState.Authenticated) {
-                    mapUseCase.getMap(collectionId, mapId)
+                    mapUseCase.getMap(collectionId, state.mapId)
                         .map { map ->
                             val m = map ?: MapEntity()
                             
@@ -119,19 +136,19 @@ class MapViewModel @Inject constructor(
             initialValue = DataState.Loading
         )
 
-    val nodes: StateFlow<DataState<List<MapNodeEntity>>> = _mapId
-        .flatMapLatest { mapId ->
-            val collectionId = _collectionId.value
-            if (mapId == null || collectionId == null) return@flatMapLatest emptyFlow<DataState<List<MapNodeEntity>>>()
+    val nodes: StateFlow<DataState<List<MapNodeEntity>>> = _mapState
+        .flatMapLatest { state ->
+            val collectionId = state.collectionId
+            if (state.mapId == null || collectionId == null) return@flatMapLatest emptyFlow<DataState<List<MapNodeEntity>>>()
             authorizationUseCase.userState.flatMapLatest { authState ->
                 when (authState) {
                     is AuthState.Authenticated -> {
-                        Log.d("MapViewModel", "User authenticated. Starting observation for map: $mapId")
-                        mapUseCase.getMapNodes(collectionId, mapId)
-                            .onEach { Log.d("MapViewModel", "Fetched ${it.size} nodes for map: $mapId") }
+                        Log.d("MapViewModel", "User authenticated. Starting observation for map: ${state.mapId}")
+                        mapUseCase.getMapNodes(collectionId, state.mapId)
+                            .onEach { Log.d("MapViewModel", "Fetched ${it.size} nodes for map: ${state.mapId}") }
                             .map { DataState.Success(it) as DataState<List<MapNodeEntity>> }
                             .catch {
-                                Log.e("MapViewModel", "Error in map flow for map: $mapId", it)
+                                Log.e("MapViewModel", "Error in map flow for map: ${state.mapId}", it)
                                 emit(DataState.Error(it))
                             }
                     }
@@ -152,6 +169,25 @@ class MapViewModel @Inject constructor(
             initialValue = DataState.Loading
         )
 
+    /**
+     * Add a map to a collection
+     */
+    fun addMap() {
+        if (!isMapFormValid) return
+        val collectId = _mapState.value.collectionId ?: return
+
+        val mapEntity = MapEntity(
+            title = _mapState.value.title.text.toString(),
+            description = _mapState.value.description.text.toString()
+        )
+
+        // Add map to collection
+        mapUseCase.addMap(collectId, mapEntity)
+
+        // Close form
+        updateShowForm(false)
+    }
+
     // Tracks which auto-layout algorithm was last applied, so the canvas
     // knows how to draw connectors (vertical, horizontal, or radial).
     private val _layoutType = MutableStateFlow(LayoutType.TOP_DOWN)
@@ -161,8 +197,8 @@ class MapViewModel @Inject constructor(
     val connectorType: StateFlow<ConnectorType> = _connectorType.asStateFlow()
 
     fun updateConnectorType(type: ConnectorType) {
-        val mapId = _mapId.value ?: return
-        val collectionId = _collectionId.value ?: return
+        val mapId = _mapState.value.mapId ?: return
+        val collectionId = _mapState.value.collectionId ?: return
         Log.d("MapViewModel", "Updating connector type for map $mapId to ${type.name}")
         _connectorType.value = type
         val map = (currentMap.value as? DataState.Success)?.data
@@ -185,8 +221,8 @@ class MapViewModel @Inject constructor(
         remainder: Timestamp?,
         alarmRepeat: String = "NONE"
     ) {
-        val mapId = _mapId.value ?: return
-        val collectionId = _collectionId.value ?: return
+        val mapId = _mapState.value.mapId ?: return
+        val collectionId = _mapState.value.collectionId ?: return
         val currentList = (nodes.value as? DataState.Success<List<MapNodeEntity>>)?.data ?: emptyList()
 
         var calculatedX = x
@@ -252,8 +288,8 @@ class MapViewModel @Inject constructor(
     }
 
     fun updateNodeDetails(node: MapNodeEntity) {
-        val mapId = _mapId.value ?: return
-        val collectionId = _collectionId.value ?: return
+        val mapId = _mapState.value.mapId ?: return
+        val collectionId = _mapState.value.collectionId ?: return
         Log.d("MapViewModel", "updateNodeDetails called for node ${node.id}. New Remainder: ${node.remainder?.toDate()}")
         
         // Directly update using the node object passed from the UI
@@ -275,8 +311,8 @@ class MapViewModel @Inject constructor(
     }
 
     fun toggleTaskStatus(node: MapNodeEntity) {
-        val mapId = _mapId.value ?: return
-        val collectionId = _collectionId.value ?: return
+        val mapId = _mapState.value.mapId ?: return
+        val collectionId = _mapState.value.collectionId ?: return
         val nextStatus = when (node.status) {
             "TODO" -> "IN_PROGRESS"
             "IN_PROGRESS" -> "COMPLETED"
@@ -329,8 +365,8 @@ class MapViewModel @Inject constructor(
     }
 
     fun updateNodePosition(node: MapNodeEntity, x: Float, y: Float) {
-        val mapId = _mapId.value ?: return
-        val collectionId = _collectionId.value ?: return
+        val mapId = _mapState.value.mapId ?: return
+        val collectionId = _mapState.value.collectionId ?: return
         mapUseCase.updateMapNodeFields(
             collectionId,
             mapId,
@@ -343,8 +379,8 @@ class MapViewModel @Inject constructor(
         node: MapNodeEntity,
         newParentId: String?
     ) {
-        val mapId = _mapId.value ?: return
-        val collectionId = _collectionId.value ?: return
+        val mapId = _mapState.value.mapId ?: return
+        val collectionId = _mapState.value.collectionId ?: return
         val currentList = (nodes.value as? DataState.Success<List<MapNodeEntity>>)?.data ?: emptyList()
         var newX = node.x
         var newY = node.y
@@ -360,8 +396,8 @@ class MapViewModel @Inject constructor(
     }
 
     fun deleteNodeAndSubtree(nodeId: String) {
-        val mapId = _mapId.value ?: return
-        val collectionId = _collectionId.value ?: return
+        val mapId = _mapState.value.mapId ?: return
+        val collectionId = _mapState.value.collectionId ?: return
         val currentList = (nodes.value as? DataState.Success<List<MapNodeEntity>>)?.data ?: emptyList()
         val toDelete = mutableSetOf<String>()
 
@@ -385,8 +421,8 @@ class MapViewModel @Inject constructor(
     fun autoLayoutTree(
         layoutType: LayoutType = LayoutType.TOP_DOWN
     ) {
-        val mapId = _mapId.value ?: return
-        val collectionId = _collectionId.value ?: return
+        val mapId = _mapState.value.mapId ?: return
+        val collectionId = _mapState.value.collectionId ?: return
         val currentList = (nodes.value as? DataState.Success<List<MapNodeEntity>>)?.data ?: return
         if (currentList.isEmpty()) return
 
@@ -409,7 +445,7 @@ class MapViewModel @Inject constructor(
     }
 
     private fun applyPositions(mapId: String, nodeMap: Map<String, LayoutNode>) {
-        val collectionId = _collectionId.value ?: return
+        val collectionId = _mapState.value.collectionId ?: return
         nodeMap.values.forEach { layoutNode ->
             if (layoutNode.x != layoutNode.node.x || layoutNode.y != layoutNode.node.y) {
                 mapUseCase.updateMapNodeFields(

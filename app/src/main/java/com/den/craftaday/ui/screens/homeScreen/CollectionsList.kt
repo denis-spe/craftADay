@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -94,10 +92,10 @@ fun CollectionItem(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Folder,
+                painter = painterResource(id = com.den.craftaday.R.drawable.ic_empty_collection),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(15.dp)
+                tint = if (selectedTab) Color.Unspecified else Color.Gray.copy(0.4f),
+                modifier = Modifier.size(25.dp)
             )
 
             Text(
@@ -132,14 +130,14 @@ fun AddCollection(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Icon(
-                painter = painterResource(id = com.den.craftaday.R.drawable.ic_plus_3d),
+                painter = painterResource(id = com.den.craftaday.R.drawable.ic_add_collection),
                 contentDescription = null,
-                modifier = Modifier.size(25.dp),
+                modifier = Modifier.size(30.dp),
                 tint = Color.Unspecified
             )
 
             Text(
-                text = "collection",
+                text = "Add Collection",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
