@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -20,7 +18,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -28,11 +25,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.den.craftaday.backend.states.CollectionState
 import com.den.craftaday.backend.viewModels.CollectionViewModel
 import androidx.compose.runtime.State
-import com.den.craftaday.backend.entities.ListCollectionEntity
+import com.den.craftaday.R
 import com.den.craftaday.ui.screens.components.CollectionDescriptionField
 import com.den.craftaday.ui.screens.components.CollectionTextField
-import com.den.craftaday.ui.screens.components.TaskDescriptionField
-import com.den.craftaday.ui.screens.components.TaskTextField
+import com.den.craftaday.ui.screens.components.btn.DataAdditionBtn
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,19 +114,10 @@ private fun CollectionAdditionForm(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Button(
+        DataAdditionBtn(
+            label = "Add Collection",
+            iconResId = R.drawable.default_collection,
             onClick = onSubmit
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Map,
-                    contentDescription = "Add Collection"
-                )
-                Text("Add Collection")
-            }
-        }
+        )
     }
 }

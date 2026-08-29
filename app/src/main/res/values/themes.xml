@@ -12,7 +12,7 @@
     <!-- Splash Screen theme. -->
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/app_start_color</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/menu_icon</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/launcher_icon</item>
         <item name="postSplashScreenTheme">@style/Theme.CraftADay</item>
     </style>
 </resources>

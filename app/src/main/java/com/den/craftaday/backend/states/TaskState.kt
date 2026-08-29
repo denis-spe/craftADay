@@ -13,5 +13,7 @@ data class TaskState(
     val title: TextFieldState = TextFieldState(),
     val description: TextFieldState = TextFieldState(),
     val taskAlarmType: TaskAlarmType = TaskAlarmType.Once(),
-    val chosenIcon: Int = R.drawable.ic_task_default
+    val chosenIcon: Int = R.drawable.ic_task_default,
+    val onDescriptionShow: Boolean = false,
+    val onTaskAlarmShow: Boolean = false,
 )

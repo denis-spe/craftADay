@@ -78,11 +78,10 @@ fun TaskList(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(
-                            painter = painterResource(id = com.den.craftaday.R.drawable.ic_task),
+                        Image(
+                            painter = painterResource(id = com.den.craftaday.R.drawable.empty_tasks),
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
-                            tint = Color.Unspecified
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(

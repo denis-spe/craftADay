@@ -67,4 +67,10 @@ class TaskViewModel @Inject constructor(
             taskEntity
         )
     }
+
+    fun onDescriptionClick(onDescriptionShow: Boolean) =
+        _taskState.update { it.copy(onDescriptionShow = onDescriptionShow) }
+
+    fun onTaskAlarmClick(onTaskAlarmShow: Boolean) =
+        _taskState.update { it.copy(onTaskAlarmShow = onTaskAlarmShow) }
 }

@@ -223,7 +223,7 @@ class AlarmReceiver : BroadcastReceiver() {
         }
         
         val builder = NotificationCompat.Builder(context, "task_reminders")
-            .setSmallIcon(R.drawable.menu_icon)
+            .setSmallIcon(R.drawable.launcher_icon)
             .setContentTitle("Task Deadline Reached")
             .setContentText("The deadline for '$nodeTitle' has passed. $statusText")
             .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -231,8 +231,8 @@ class AlarmReceiver : BroadcastReceiver() {
             .setSound(soundUri)
             .setVibrate(longArrayOf(0, 500, 200, 500))
             .setContentIntent(pendingIntent)
-            .addAction(R.drawable.menu_icon, "MarkType as Done", donePendingIntent)
-            .addAction(R.drawable.menu_icon, "MarkType as Failed", failedPendingIntent)
+            .addAction(R.drawable.launcher_icon, "MarkType as Done", donePendingIntent)
+            .addAction(R.drawable.launcher_icon, "MarkType as Failed", failedPendingIntent)
             .setAutoCancel(true)
 
         with(NotificationManagerCompat.from(context)) {

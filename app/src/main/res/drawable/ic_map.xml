@@ -13,7 +13,7 @@
     <!-- Map Body (3D Edge) -->
     <path
         android:pathData="M40.5,5.5l-0.32,0.06L28.5,9.7l-12,-4.2l-11.28,3.8C4.8,9.44 4.5,9.8 4.5,10.26v30.24c0,0.56 0.44,1 1,1l0.32,-0.06L17.5,37.3l12,4.2l11.28,-3.8c0.42,-0.14 0.72,-0.5 0.72,-0.96V6.5c0,-0.56 -0.44,-1 -1,-1z"
-        android:fillColor="?attr/colorPrimary"/>
+        android:fillColor="?attr/colorOnPrimary"/>
     <path
         android:pathData="M40.5,5.5l-0.32,0.06L28.5,9.7l-12,-4.2l-11.28,3.8C4.8,9.44 4.5,9.8 4.5,10.26v30.24c0,0.56 0.44,1 1,1l0.32,-0.06L17.5,37.3l12,4.2l11.28,-3.8c0.42,-0.14 0.72,-0.5 0.72,-0.96V6.5c0,-0.56 -0.44,-1 -1,-1z"
         android:fillColor="#000000"
@@ -22,7 +22,7 @@
     <!-- Front layer -->
     <path
         android:pathData="M40,5l-0.32,0.06L28,9.2l-12,-4.2l-11.28,3.8C4.3,8.94 4,9.3 4,9.76v30.24c0,0.56 0.44,1 1,1l0.32,-0.06L16,36.8l12,4.2l11.28,-3.8c0.42,-0.14 0.72,-0.5 0.72,-0.96V6c0,-0.56 -0.44,-1 -1,-1z"
-        android:fillColor="?attr/colorPrimary"/>
+        android:fillColor="?attr/colorOnPrimary"/>
 
     <!-- Map folds -->
     <path

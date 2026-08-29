@@ -13,7 +13,7 @@
     <!-- Clipboard Side -->
     <path
         android:pathData="M37,5H28.64C27.8,2.68 25.6,1 23,1c-2.6,0 -4.8,1.68 -5.64,4H9C6.8,5 5,6.8 5,9v28c0,2.2 1.8,4 4,4h28c2.2,0 4,-1.8 4,-4V9C41,6.8 39.2,5 37,5Z"
-        android:fillColor="?attr/colorPrimary"/>
+        android:fillColor="?attr/colorOnPrimary"/>
     <path
         android:pathData="M37,5H28.64C27.8,2.68 25.6,1 23,1c-2.6,0 -4.8,1.68 -5.64,4H9C6.8,5 5,6.8 5,9v28c0,2.2 1.8,4 4,4h28c2.2,0 4,-1.8 4,-4V9C41,6.8 39.2,5 37,5Z"
         android:fillColor="#000000"
@@ -22,7 +22,7 @@
     <!-- Clipboard Front -->
     <path
         android:pathData="M36,4H27.64C26.8,1.68 24.6,0 22,0c-2.6,0 -4.8,1.68 -5.64,4H8C5.8,4 4,5.8 4,8v28c0,2.2 1.8,4 4,4h28c2.2,0 4,-1.8 4,-4V8C40,5.8 38.2,4 36,4Z"
-        android:fillColor="?attr/colorPrimary"/>
+        android:fillColor="?attr/colorOnPrimary"/>
 
     <!-- Details -->
     <path
@@ -44,7 +44,7 @@
     <!-- Plus Badge Front -->
     <path
         android:pathData="M42,33c0,5.52 -4.48,10 -10,10s-10,-4.48 -10,-10s4.48,-10 10,-10s10,4.48 10,10z"
-        android:fillColor="?attr/colorPrimary"/>
+        android:fillColor="?attr/colorOnPrimary"/>
 
     <!-- Plus Symbol -->
     <path

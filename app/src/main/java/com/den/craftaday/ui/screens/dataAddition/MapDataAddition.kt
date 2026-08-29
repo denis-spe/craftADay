@@ -8,10 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -27,16 +24,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.den.craftaday.backend.entities.ListCollectionEntity
-import com.den.craftaday.backend.entities.MapEntity
-import com.den.craftaday.backend.states.CollectionState
+import com.den.craftaday.R
 import com.den.craftaday.backend.states.MapState
-import com.den.craftaday.backend.viewModels.CollectionViewModel
 import com.den.craftaday.backend.viewModels.MapViewModel
+import com.den.craftaday.ui.screens.components.btn.DataAdditionBtn
 import com.den.craftaday.ui.screens.components.MapDescriptionField
 import com.den.craftaday.ui.screens.components.MapTextField
-import com.den.craftaday.ui.screens.components.TaskDescriptionField
-import com.den.craftaday.ui.screens.components.TaskTextField
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,7 +85,7 @@ private fun MapAdditionHeader(onDismiss: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = "Add Map",
+            text = "Add Plan",
             modifier = Modifier.padding(bottom = 16.dp),
             style = MaterialTheme.typography.titleLarge
         )
@@ -127,19 +120,10 @@ private fun MapAdditionForm(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Button(
+        DataAdditionBtn(
+            label = "Add Plan",
+            iconResId = R.drawable.outline_plan,
             onClick = onSubmit
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Map,
-                    contentDescription = "Add Map"
-                )
-                Text("Add Map")
-            }
-        }
+        )
     }
 }

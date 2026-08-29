@@ -1,6 +1,8 @@
 // Bless be to name of LORD GOD of hosts
 package com.den.craftaday.ui.screens.homeScreen
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateSizeAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,10 +42,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toIntSize
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavBackStack
@@ -195,6 +199,37 @@ fun HomeBottomNavigation(
 ) {
     val iconSize = 33.dp
     val padding = 6.dp
+    val color = MaterialTheme.colorScheme.primary
+
+    val taskIconId = remember(selectedTab) {
+        if (selectedTab == 0)
+            com.den.craftaday.R.drawable.filled_task
+        else com.den.craftaday.R.drawable.outlined_task
+    }
+    val mapIconId = remember(selectedTab) {
+        if (selectedTab == 1)
+            com.den.craftaday.R.drawable.filled_plan
+        else com.den.craftaday.R.drawable.outline_plan
+    }
+
+    val taskColor = remember(selectedTab) {
+        if (selectedTab == 0) color
+        else color.copy(0.3f)
+    }
+    val mapColor = remember(selectedTab) {
+        if (selectedTab == 1) color
+        else color.copy(0.3f)
+    }
+    val taskIconSize = animateDpAsState(
+        if (selectedTab == 0) 33.dp else 25.dp,
+        label = "task animate"
+    )
+    val planIconSize = animateDpAsState(
+        if (selectedTab == 1) 33.dp else 25.dp,
+        label = "plan animate"
+    )
+
+
 
     BottomAppBar(
         containerColor = MaterialTheme.colorScheme.background,
@@ -206,6 +241,7 @@ fun HomeBottomNavigation(
             horizontalArrangement = Arrangement.Center
         ) {
 
+            // Home button
             OutlinedCard(
                 modifier = Modifier,
                 shape = CircleShape,
@@ -244,24 +280,22 @@ fun HomeBottomNavigation(
                         onClick = onTaskBtnClick
                     ) {
                         Icon(
-                            imageVector = Icons.Default.TaskAlt,
+                            painter = painterResource(id = taskIconId),
                             contentDescription = null,
-                            tint = if (selectedTab == 0) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.primary.copy(0.3f),
-                            modifier = Modifier.size(iconSize)
+                            tint = taskColor,
+                            modifier = Modifier.size(taskIconSize.value)
                         )
                     }
 
                     IconButton(
                         onClick = onMapBtnClick
                     ) {
+
                         Icon(
-                            imageVector = Icons.Default.Map,
+                            painter = painterResource(id = mapIconId),
                             contentDescription = null,
-                            tint = if (selectedTab == 1)
-                                MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.primary.copy(0.3f),
-                            modifier = Modifier.size(iconSize)
+                            tint = mapColor,
+                            modifier = Modifier.size(planIconSize.value)
                         )
                     }
                 }
@@ -269,43 +303,28 @@ fun HomeBottomNavigation(
 
             Spacer(modifier = Modifier.width(5.dp))
 
+            // Add button
             OutlinedCard(
                 modifier = Modifier,
                 shape = CircleShape,
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 border = CardDefaults.outlinedCardBorder(enabled = false),
-                onClick = onAddBtnClick
+                onClick = {
+                    onAddBtnClick()
+                }
             ) {
                 Box(
                     modifier = Modifier.padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
-
                     Icon(
-                        imageVector = if (selectedTab == 1) Icons.Default.Map else Icons.Default.TaskAlt,
+                        imageVector = Icons.Default.Add,
                         contentDescription = null,
                         modifier = Modifier.size(iconSize),
                         tint = MaterialTheme.colorScheme.primary
                     )
-                    Card(
-                        modifier = Modifier.align(Alignment.BottomEnd),
-                        shape = CircleShape,
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        border = CardDefaults.outlinedCardBorder(enabled = false),
-                        colors = CardDefaults.outlinedCardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
                 }
             }
-
         }
     }
 }

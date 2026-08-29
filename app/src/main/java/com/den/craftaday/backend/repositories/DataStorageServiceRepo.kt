@@ -368,6 +368,8 @@ class DataStorageServiceRepo(
             ListCollectionEntity(
                 id = id,
                 name = getString("name") ?: "",
+                description = getString("description") ?: "",
+                icon = getLongSafe("icon")?.toInt() ?: R.drawable.default_collection,
                 createdAt = getLongSafe("createdAt") ?: 0L
             )
         } catch (e: Exception) {

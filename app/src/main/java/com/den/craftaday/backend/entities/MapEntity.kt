@@ -10,5 +10,6 @@ data class MapEntity(
     val title: String = "",
     val description: String = "",
     val layoutType: String = "TOP_DOWN",
-    val connectorType: String = "BEZIER"
+    val connectorType: String = "BEZIER",
+    val icon: Int = com.den.craftaday.R.drawable.outline_plan,
 )

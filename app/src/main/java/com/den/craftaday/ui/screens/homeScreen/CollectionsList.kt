@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -72,6 +73,12 @@ fun CollectionItem(
     collection: ListCollectionEntity,
     onClick: () -> Unit
 ) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    val color = remember(selectedTab) {
+        if (selectedTab) primaryColor else Color.Gray.copy(0.4f)
+    }
+
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth(),
@@ -92,9 +99,9 @@ fun CollectionItem(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Icon(
-                painter = painterResource(id = com.den.craftaday.R.drawable.ic_empty_collection),
+                painter = painterResource(id = collection.icon),
                 contentDescription = null,
-                tint = if (selectedTab) Color.Unspecified else Color.Gray.copy(0.4f),
+                tint = color,
                 modifier = Modifier.size(25.dp)
             )
 
@@ -130,14 +137,14 @@ fun AddCollection(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Icon(
-                painter = painterResource(id = com.den.craftaday.R.drawable.ic_add_collection),
+                painter = painterResource(id = com.den.craftaday.R.drawable.add_collection_outlined),
                 contentDescription = null,
                 modifier = Modifier.size(30.dp),
-                tint = Color.Unspecified
+                tint = MaterialTheme.colorScheme.primary
             )
 
             Text(
-                text = "Add Collection",
+                text = "Add List",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )

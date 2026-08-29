@@ -8,9 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,14 +20,18 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.den.craftaday.R
 import com.den.craftaday.backend.states.TaskState
 import com.den.craftaday.backend.viewModels.TaskViewModel
+import com.den.craftaday.ui.screens.components.btn.DataAdditionBtn
 import com.den.craftaday.ui.screens.components.TaskDescriptionField
 import com.den.craftaday.ui.screens.components.TaskTextField
+import com.den.craftaday.ui.screens.components.btn.DescriptionBtn
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,7 +69,7 @@ fun TaskDataAddition(taskViewModel: TaskViewModel, collectionId: String) {
 
                         TaskAdditionForm(
                             state = state,
-                            onSubmit = taskViewModel::addTaskData
+                            taskViewModel = taskViewModel
                         )
                     }
                 }
@@ -102,7 +104,15 @@ fun TaskAdditionHeader(
 }
 
 @Composable
-private fun TaskAdditionForm(state: State<TaskState>, onSubmit: () -> Unit) {
+private fun TaskAdditionForm(
+    state: State<TaskState>,
+    taskViewModel: TaskViewModel
+) {
+    val descriptionState = remember(state.value.description) {
+        state.value.description.text.toString().ifEmpty {
+            "Description"
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -114,24 +124,18 @@ private fun TaskAdditionForm(state: State<TaskState>, onSubmit: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        TaskDescriptionField(
-            state = state.value.description,
-            modifier = Modifier.fillMaxWidth()
+
+        TaskMultiRowButtons(
+            onDescriptionShow = state.value.onDescriptionShow,
+            onDateShow = state.value.onTaskAlarmShow,
+            onDescriptionClick = taskViewModel::onDescriptionClick,
+            onDateClick = taskViewModel::onTaskAlarmClick
         )
 
-        Button(
-            onClick = onSubmit
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AddTask,
-                    contentDescription = "Add Task"
-                )
-                Text("Add Task")
-            }
-        }
+        DataAdditionBtn(
+            label = "Add Task",
+            iconResId = R.drawable.outlined_task,
+            onClick = taskViewModel::addTaskData
+        )
     }
 }

@@ -124,7 +124,7 @@ class TaskAlarmReceiver: BroadcastReceiver() {
         }
 
         val builder = NotificationCompat.Builder(context, "task_reminders")
-            .setSmallIcon(R.drawable.menu_icon)
+            .setSmallIcon(R.drawable.launcher_icon)
             .setContentTitle(title)
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_MAX)

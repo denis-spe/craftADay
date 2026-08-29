@@ -16,7 +16,7 @@ data class TaskEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val remainder: Long = 0L,
     val markType: MarkType = MarkType.Initial,
-    val chosenIcon: Int = R.drawable.ic_task_default,
+    val chosenIcon: Int = R.drawable.outlined_task,
     val taskAlarmType: TaskAlarmType = TaskAlarmType.Once()
 ) {
     val toMap: Map<String, Any>
