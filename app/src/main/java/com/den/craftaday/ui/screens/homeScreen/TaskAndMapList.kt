@@ -34,6 +34,7 @@ fun TaskAndMapList(
         if (collectionId.isNotEmpty() && collectionId.isNotBlank()) {
             when (selectedTab) {
                 0 -> TaskList(
+                    taskViewModel = taskViewModel,
                     dataFetchViewModel = dataFetchViewModel,
                     onMarkClick = remember(taskViewModel) {
                         taskViewModel::onMarkClick

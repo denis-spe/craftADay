@@ -6,6 +6,7 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AlarmOn
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
@@ -31,8 +35,13 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxDefaults
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,20 +56,21 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.den.craftaday.backend.entities.types.MarkType
-import com.den.craftaday.backend.entities.types.TaskAlarmType
 import com.den.craftaday.backend.entities.TaskEntity
 import com.den.craftaday.backend.states.DataState
 import com.den.craftaday.backend.viewModels.DataFetchViewModel
-import com.den.craftaday.backend.viewModels.HomeViewModel
-import com.den.craftaday.helper.CurrentTimeChange
-import com.den.craftaday.helper.TimeChange
+import com.den.craftaday.backend.viewModels.TaskViewModel
+import com.den.craftaday.helper.toLocalTimeFormat
+import com.den.craftaday.ui.screens.components.dialog.DeleteDialog
 
 @Composable
 fun TaskList(
+    taskViewModel: TaskViewModel,
     dataFetchViewModel: DataFetchViewModel,
     onMarkClick: (taskEntity: TaskEntity) -> Unit
 ) {
     val state by dataFetchViewModel.tasksInCollection.collectAsStateWithLifecycle()
+    val taskState by taskViewModel.taskState.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (state) {
@@ -96,18 +106,32 @@ fun TaskList(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(tasks, key = { it.id }) { task ->
-                            TaskItem(taskEntity = task, onMarkClick = onMarkClick)
+                            TaskItem(
+                                taskEntity = task,
+                                onMarkClick = onMarkClick,
+                                onEditClick = taskViewModel::currentTaskToModify,
+                                onRemoveClick = taskViewModel::currentTaskToDelete
+                            )
                         }
                     }
                 }
             }
         }
     }
+
+    DeleteDialog(
+        title = taskState.selectedTask?.title ?: "Task",
+        onShow = taskState.onShowDeleteDialog,
+        onConfirm = taskViewModel::deleteTask,
+        onCancel = { taskViewModel.updateShowDeleteDialog(false) }
+    )
 }
 
 @Composable
 fun TaskItem(
     taskEntity: TaskEntity,
+    onRemoveClick: (taskEntity: TaskEntity) -> Unit,
+    onEditClick: (taskEntity: TaskEntity) -> Unit,
     onMarkClick: (taskEntity: TaskEntity) -> Unit
 ) {
     val mark = taskEntity.markType
@@ -131,23 +155,10 @@ fun TaskItem(
 
     val deadlineTimeChange = remember(taskEntity.taskAlarmType) {
         val timeChange = when (val alarm = taskEntity.taskAlarmType) {
-            is TaskAlarmType.SpecificWeekDay -> alarm.dateTimes.CurrentTimeChange
-            is TaskAlarmType.SpecificDate -> alarm.dateTimes.CurrentTimeChange
-            else -> alarm.primaryTimestamp.CurrentTimeChange
+            else -> alarm.primaryTimestamp
         }
 
-        val label = when (timeChange) {
-            is TimeChange.Years -> "${timeChange.value} years"
-            is TimeChange.Months -> "${timeChange.value} months"
-            is TimeChange.Days -> "${timeChange.value} days"
-            is TimeChange.Hours -> "${timeChange.value} hours"
-            is TimeChange.Minutes -> "${timeChange.value} minutes"
-            is TimeChange.SpecificDate -> timeChange.value
-            is TimeChange.SpecificWeekDay -> timeChange.value
-            TimeChange.JustNow -> "just now"
-        }
-
-        if (label == "just now") label else "Deadline in $label"
+        timeChange.toLocalTimeFormat
     }
 
     val markTypeState = remember(taskEntity.markType) {
@@ -161,78 +172,166 @@ fun TaskItem(
 
     var isVisible by remember { mutableStateOf(false) }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        onClick = {
-            onMarkClick(taskEntity.copy(markType = markTypeState))
+    val swipeToDismissState = rememberSwipeToDismissBoxState(
+        SwipeToDismissBoxValue.Settled,
+        SwipeToDismissBoxDefaults.positionalThreshold
+    )
+
+    LaunchedEffect(swipeToDismissState.targetValue) {
+        if (swipeToDismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
+            onRemoveClick(taskEntity)
+            swipeToDismissState.reset()
+        }
+
+        if (swipeToDismissState.targetValue == SwipeToDismissBoxValue.StartToEnd) {
+            onEditClick(taskEntity)
+            swipeToDismissState.reset()
+        }
+    }
+
+
+    SwipeToDismissBox(
+        modifier = Modifier.clip(RoundedCornerShape(12.dp)),
+        state = swipeToDismissState,
+        backgroundContent = {
+            when (swipeToDismissState.dismissDirection) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF6DA829)),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(start = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+
+                            Text(
+                                text = "Edit",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
+                SwipeToDismissBoxValue.EndToStart -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFE8574A)),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(end = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                            Text(
+                                text = "Delete",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
+                SwipeToDismissBoxValue.Settled -> {}
+            }
         }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                onClick = {
+                    onMarkClick(taskEntity.copy(markType = markTypeState))
+                }
             ) {
-                // Header icon reflects the taskEntity's actual current state, so it's the
-                // only icon in this row that should animate.
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Header icon reflects the taskEntity's actual current state, so it's the
+                        // only icon in this row that should animate.
 
-                Image(
-                    painter = painterResource(id = taskEntity.chosenIcon),
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp)
-                )
+                        Image(
+                            painter = painterResource(id = taskEntity.chosenIcon),
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp)
+                        )
 
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        taskEntity.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        textDecoration = textDecoration
-                    )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                taskEntity.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                textDecoration = textDecoration
+                            )
 
-                    Text(
-                        text = deadlineTimeChange,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AlarmOn,
+                                    contentDescription = null,
+                                    tint = Color.Gray
+                                )
+                                Text(
+                                    text = deadlineTimeChange,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
 
-                StatusIcon(
-                    markType = mark,
-                    animate = true,
-                    modifier = Modifier.size(28.dp)
-                )
-                IconButton(
-                    onClick = {
-                        isVisible = !isVisible
+                        StatusIcon(
+                            markType = mark,
+                            animate = true,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        IconButton(
+                            onClick = {
+                                isVisible = !isVisible
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (isVisible)
+                                    Icons.Default.KeyboardArrowUp
+                                else Icons.Default.KeyboardArrowDown,
+                                contentDescription = null
+                            )
+                        }
                     }
-                ) {
-                    Icon(
-                        imageVector = if (isVisible)
-                            Icons.Default.KeyboardArrowUp
-                        else Icons.Default.KeyboardArrowDown,
-                        contentDescription = null
+
+                    TaskIconToggleButtons(
+                        isVisible = isVisible,
+                        taskEntity = taskEntity,
+                        onMarkChange = onMarkClick
                     )
                 }
             }
-
-            if (taskEntity.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = taskEntity.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            TaskIconToggleButtons(
-                isVisible = isVisible,
-                taskEntity = taskEntity,
-                onMarkChange = onMarkClick
-            )
         }
     }
 }
@@ -273,7 +372,10 @@ fun StatusIcon(
 
 
     // Simplified animation state to avoid double-recomposition on start.
-    val atEnd by remember(markType, animate) { mutableStateOf(markType != MarkType.InProgress && !animate) }
+    val atEnd by remember(
+        markType,
+        animate
+    ) { mutableStateOf(markType != MarkType.InProgress && !animate) }
     val painter = rememberAnimatedVectorPainter(image, atEnd || animate)
 
     Image(
@@ -294,43 +396,74 @@ fun TaskIconToggleButtons(
             visible = isVisible,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    StatusButton(
-                        selected = taskEntity.markType == MarkType.Initial,
-                        markType = MarkType.Initial,
-                        label = "Initial",
-                        color = Color(0xFF777672),
-                        onClick = remember(taskEntity, onMarkChange) { { onMarkChange(taskEntity.copy(markType = MarkType.Initial)) } }
-                    )
-                    StatusButton(
-                        selected = taskEntity.markType == MarkType.InProgress,
-                        markType = MarkType.InProgress,
-                        label = "Doing",
-                        color = Color(0xFFFFA500),
-                        onClick = remember(taskEntity, onMarkChange) { { onMarkChange(taskEntity.copy(markType = MarkType.InProgress)) } }
-                    )
-                    StatusButton(
-                        selected = taskEntity.markType == MarkType.Done,
-                        markType = MarkType.Done,
-                        label = "Done",
-                        color = Color(0xFF388E3C),
-                        onClick = remember(taskEntity, onMarkChange) { { onMarkChange(taskEntity.copy(markType = MarkType.Done)) } }
-                    )
-                    StatusButton(
-                        selected = taskEntity.markType == MarkType.Failed,
-                        markType = MarkType.Failed,
-                        label = "Failed",
-                        color = Color(0xFFB00020),
-                        onClick = remember(taskEntity, onMarkChange) { { onMarkChange(taskEntity.copy(markType = MarkType.Failed)) } }
-                    )
+                    if (taskEntity.description.isNotBlank()) {
+                        Text(
+                            text = taskEntity.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        StatusButton(
+                            selected = taskEntity.markType == MarkType.Initial,
+                            markType = MarkType.Initial,
+                            label = "Initial",
+                            color = Color(0xFF777672),
+                            onClick = remember(
+                                taskEntity,
+                                onMarkChange
+                            ) { { onMarkChange(taskEntity.copy(markType = MarkType.Initial)) } }
+                        )
+                        StatusButton(
+                            selected = taskEntity.markType == MarkType.InProgress,
+                            markType = MarkType.InProgress,
+                            label = "Doing",
+                            color = Color(0xFFFFA500),
+                            onClick = remember(
+                                taskEntity,
+                                onMarkChange
+                            ) { { onMarkChange(taskEntity.copy(markType = MarkType.InProgress)) } }
+                        )
+                        StatusButton(
+                            selected = taskEntity.markType == MarkType.Done,
+                            markType = MarkType.Done,
+                            label = "Done",
+                            color = Color(0xFF388E3C),
+                            onClick = remember(
+                                taskEntity,
+                                onMarkChange
+                            ) { { onMarkChange(taskEntity.copy(markType = MarkType.Done)) } }
+                        )
+                        StatusButton(
+                            selected = taskEntity.markType == MarkType.Failed,
+                            markType = MarkType.Failed,
+                            label = "Failed",
+                            color = Color(0xFFB00020),
+                            onClick = remember(
+                                taskEntity,
+                                onMarkChange
+                            ) { { onMarkChange(taskEntity.copy(markType = MarkType.Failed)) } }
+                        )
+                    }
                 }
             }
         }

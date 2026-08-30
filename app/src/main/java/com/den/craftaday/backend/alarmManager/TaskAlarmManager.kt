@@ -27,16 +27,17 @@ class TaskAlarmManager @Inject constructor(
     fun scheduleAlarm(
         task: TaskEntity
     ) {
-        val intent = Intent(context, AlarmReceiver::class.java).apply {
+        val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
             action = ACTION_TASK_REMINDER
             putExtra("collectionId", task.collectionId)
             putExtra("taskId", task.id)
+            putExtra("taskTitle", task.title)
         }
 
-        // Use taskId.hashCode() as a unique request code for each task
+        // Use task.id.hashCode() as a unique request code for each task
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            task.hashCode(),
+            task.id.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -71,7 +72,7 @@ class TaskAlarmManager @Inject constructor(
     }
 
     fun cancelAlarm(nodeId: String) {
-        val intent = Intent(context, AlarmReceiver::class.java).apply {
+        val intent = Intent(context, TaskAlarmReceiver::class.java).apply {
             action = ACTION_TASK_REMINDER
         }
         val pendingIntent = PendingIntent.getBroadcast(

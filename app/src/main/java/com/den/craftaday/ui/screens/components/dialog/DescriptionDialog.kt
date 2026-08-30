@@ -1,5 +1,5 @@
 // Bless be the name of the LORD GOD
-package com.den.craftaday.ui.screens.components.btn
+package com.den.craftaday.ui.screens.components.dialog
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,9 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -23,11 +21,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -36,32 +33,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
 @Composable
-fun DescriptionBtn(
+fun DescriptionDialog(
     label: String,
     text: TextFieldState,
+    onDisplayState: Boolean,
+    onDialogDisplay: (Boolean) -> Unit,
 ) {
-    val onDismissState = remember { mutableStateOf(false) }
-    val textState = rememberTextFieldState()
-
+    val textState = rememberTextFieldState(
+        initialText = text.text.toString()
+    )
     val state = remember { mutableStateOf("") }
-    val textDescription = remember(state.value) {
-        state.value.ifEmpty {
-            label
-        }
-    }
 
-
-//    Button(onClick = {
-//        onDismissState.value = true
-//    }) {
-//        Text(textDescription)
-//    }
-
-
-    if (onDismissState.value) {
+    if (onDisplayState) {
         Dialog(
             onDismissRequest = {
-                onDismissState.value = false
+                onDialogDisplay(false)
             }
         ) {
             Card {
@@ -71,7 +57,7 @@ fun DescriptionBtn(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     DescriptionHeader(label) {
-                        onDismissState.value = false
+                        onDialogDisplay(false)
                     }
 
                     DescriptionTextField(
@@ -83,10 +69,10 @@ fun DescriptionBtn(
                         onConfirm = {
                             state.value = textState.text.toString()
                             text.setTextAndPlaceCursorAtEnd(textState.text.toString())
-                            onDismissState.value = false
+                            onDialogDisplay(false)
                         },
                         onCancel = {
-                            onDismissState.value = false
+                            onDialogDisplay(false)
                         }
                     )
                 }

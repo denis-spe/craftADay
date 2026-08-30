@@ -17,10 +17,10 @@ class TaskUseCase @Inject constructor(
     private val userId get() = accountService.currentUserId
 
     fun addTask(collectionId: String, taskEntity: TaskEntity) {
-        dataStorageService.addTask(userId = userId, collectionId = collectionId, taskEntity = taskEntity)
+        val savedTask = dataStorageService.addTask(userId = userId, collectionId = collectionId, taskEntity = taskEntity)
 
         // Schedule alarm
-        taskAlarmManager.scheduleAlarm(taskEntity)
+        taskAlarmManager.scheduleAlarm(savedTask)
     }
 
     fun getAllTasks() = dataStorageService.getAllDatasets(userId = userId)

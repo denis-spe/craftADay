@@ -116,14 +116,14 @@ class DataStorageServiceRepo(
         userId: String,
         collectionId: String,
         taskEntity: TaskEntity
-    ) {
+    ): TaskEntity {
          val taskRef = docRef.document(userId)
              .collection(COLLECTION)
              .document(collectionId)
              .collection(TASKS_COLLECTION)
              .document()
 
-        val taskCopy = taskEntity.copy(id = taskRef.id)
+        val taskCopy = taskEntity.copy(id = taskRef.id, collectionId = collectionId)
         taskRef.set(taskCopy.toMap)
             .addOnSuccessListener {
                 Log.w(TAG, "TaskEntity added successfully to collection $collectionId")
@@ -131,6 +131,7 @@ class DataStorageServiceRepo(
             .addOnFailureListener {
                 Log.e(TAG, "Error adding taskEntity: $it")
             }
+        return taskCopy
     }
 
     override fun deleteTask(

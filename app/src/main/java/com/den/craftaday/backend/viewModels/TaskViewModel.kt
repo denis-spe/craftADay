@@ -4,6 +4,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import com.den.craftaday.backend.entities.TaskEntity
+import com.den.craftaday.backend.entities.types.TaskAlarmType
 import com.den.craftaday.backend.states.TaskState
 import com.den.craftaday.backend.useCase.TaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,6 +43,7 @@ class TaskViewModel @Inject constructor(
         if (!isTaskFormValid) return
 
         val taskEntity = TaskEntity(
+            collectionId = _taskState.value.collectionId,
             title = _taskState.value.title.text as String,
             description = _taskState.value.description.text as String,
             chosenIcon = _taskState.value.chosenIcon,
@@ -68,9 +70,51 @@ class TaskViewModel @Inject constructor(
         )
     }
 
-    fun onDescriptionClick(onDescriptionShow: Boolean) =
+    fun deleteTask() {
+        _taskState.value.selectedTask?.let {
+            taskUseCase.deleteTask(
+                _taskState.value.collectionId,
+                it
+                )
+        }
+
+        // Close the form
+        _taskState.update { it.copy(onShowDeleteDialog = false) }
+    }
+
+    fun currentTaskToModify(taskEntity: TaskEntity) {
+        _taskState.update { it.copy(selectedTask = taskEntity, onTaskModification = true) }
+    }
+
+    fun currentTaskToDelete(taskEntity: TaskEntity) {
+        _taskState.update { it.copy(selectedTask = taskEntity, onShowDeleteDialog = true) }
+    }
+
+
+    fun editTask() {
+        _taskState.value.selectedTask?.let { taskEntity ->
+            // Update a taskEntity to the collection
+            taskUseCase.updateTask(_taskState.value.collectionId, taskEntity)
+        }
+        // Close the form
+        _taskState.update { it.copy(onTaskModification = false) }
+    }
+
+    fun updateShowDeleteDialog(onShowDeleteDialog: Boolean) {
+        _taskState.update { it.copy(onShowDeleteDialog = onShowDeleteDialog) }
+    }
+
+    fun updateOnModification(onTaskModification: Boolean) {
+        _taskState.update { it.copy(onTaskModification = onTaskModification) }
+    }
+
+    fun onDescriptionClick(onDescriptionShow: Boolean) {
         _taskState.update { it.copy(onDescriptionShow = onDescriptionShow) }
+    }
 
     fun onTaskAlarmClick(onTaskAlarmShow: Boolean) =
         _taskState.update { it.copy(onTaskAlarmShow = onTaskAlarmShow) }
+
+    fun updateTaskAlarm(taskAlarmType: TaskAlarmType) =
+        _taskState.update { it.copy(taskAlarmType = taskAlarmType) }
 }

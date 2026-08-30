@@ -21,7 +21,7 @@ interface DataStorageService {
     /**
      * Add a taskEntity to the database
      */
-    fun addTask(userId: String, collectionId: String, taskEntity: TaskEntity)
+    fun addTask(userId: String, collectionId: String, taskEntity: TaskEntity): TaskEntity
 
     /**
      * Delete a taskEntity from the database

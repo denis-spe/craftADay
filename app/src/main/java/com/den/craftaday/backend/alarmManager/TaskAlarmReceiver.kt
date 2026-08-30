@@ -22,6 +22,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -46,6 +47,7 @@ class TaskAlarmReceiver: BroadcastReceiver() {
         val action = intent.action
         val collectionId = intent.getStringExtra("collectionId") ?: return
         val taskId = intent.getStringExtra("taskId") ?: return
+        val taskTitle = intent.getStringExtra("taskTitle") ?: "Task Reminder"
 
         val userId = accountService.currentUserId
         if (userId.isEmpty()) return
@@ -60,24 +62,34 @@ class TaskAlarmReceiver: BroadcastReceiver() {
             return
         }
 
+        // Show notification immediately using available intent data
+        showNotification(
+            context,
+            taskId.hashCode(),
+            TaskEntity(id = taskId, collectionId = collectionId, title = taskTitle)
+        )
 
+        val pendingResult = goAsync()
         scope.launch {
             try {
-                val getTask = dataStorageService.getTask(userId, collectionId, taskId)
+                val task = dataStorageService.getTask(userId, collectionId, taskId).firstOrNull()
 
-                // Show notification
-                showNotification(context, taskId.hashCode(), TaskEntity())
+                if (task != null) {
+                    // Update notification with full data if needed (e.g. description or latest title)
+                    showNotification(context, taskId.hashCode(), task)
 
-                getTask.collect { task ->
-                    if (task != null && task.taskAlarmType !is TaskAlarmType.Once ) {
+                    if (task.taskAlarmType !is TaskAlarmType.Once) {
                         taskAlarmManager.scheduleAlarm(task)
-                    } else {
-                        Log.e(TAG, "Task with ID $taskId not found")
                     }
+                    Log.d(TAG, "Scheduled alarm for ${task.title}")
+                } else {
+                    Log.e(TAG, "Task with ID $taskId not found in collection $collectionId")
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error occurred while fetching task", e)
+            } finally {
+                pendingResult.finish()
             }
         }
     }
@@ -94,7 +106,7 @@ class TaskAlarmReceiver: BroadcastReceiver() {
             context, 0, intent, PendingIntent.FLAG_IMMUTABLE
         )
 
-        val doneIntent = Intent(context, AlarmReceiver::class.java).apply {
+        val doneIntent = Intent(context, TaskAlarmReceiver::class.java).apply {
             action = context.getString(R.string.action_task_done)
             putExtra("collectionId", task.collectionId)
             putExtra("taskId", task.id)
@@ -103,7 +115,7 @@ class TaskAlarmReceiver: BroadcastReceiver() {
             context, task.id.hashCode() + 1, doneIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val failedIntent = Intent(context, AlarmReceiver::class.java).apply {
+        val failedIntent = Intent(context, TaskAlarmReceiver::class.java).apply {
             action = context.getString(R.string.action_task_failed)
             putExtra("collectionId", task.collectionId)
             putExtra("taskId", task.id)
@@ -124,7 +136,7 @@ class TaskAlarmReceiver: BroadcastReceiver() {
         }
 
         val builder = NotificationCompat.Builder(context, "task_reminders")
-            .setSmallIcon(R.drawable.launcher_icon)
+            .setSmallIcon(R.drawable.ic_task_done)
             .setContentTitle(title)
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -140,7 +152,7 @@ class TaskAlarmReceiver: BroadcastReceiver() {
             try {
                 notify(notificationId, builder.build())
             } catch (e: SecurityException) {
-                Log.e("AlarmReceiver", "Missing permission to show notification: ${e.message}")
+                Log.e(TAG, "Missing permission to show notification: ${e.message}")
             }
         }
     }
@@ -155,19 +167,17 @@ class TaskAlarmReceiver: BroadcastReceiver() {
 
         scope.launch {
             try {
-                val taskEntity = dataStorageService.getTask(userId, collectionId, taskId)
+                val taskEntity = dataStorageService.getTask(userId, collectionId, taskId).firstOrNull()
 
-                taskEntity.collect {
-                    if (it != null) {
-                        dataStorageService.updateTask(
-                            userId,
-                            collectionId,
-                            it.copy(markType = MarkType.Done)
-                        )
+                if (taskEntity != null) {
+                    dataStorageService.updateTask(
+                        userId,
+                        collectionId,
+                        taskEntity.copy(markType = MarkType.Done)
+                    )
 
-                    } else {
-                        Log.e(TAG, "Task with ID $taskId not found")
-                    }
+                } else {
+                    Log.e(TAG, "Task with ID $taskId not found in collection $collectionId")
                 }
             } finally {
                 pendingResult.finish()
@@ -189,19 +199,17 @@ class TaskAlarmReceiver: BroadcastReceiver() {
 
         scope.launch {
             try {
-                val taskEntity = dataStorageService.getTask(userId, collectionId, taskId)
+                val taskEntity = dataStorageService.getTask(userId, collectionId, taskId).firstOrNull()
 
-                taskEntity.collect {
-                    if (it != null) {
-                        dataStorageService.updateTask(
-                            userId,
-                            collectionId,
-                            it.copy(markType = MarkType.Failed)
-                        )
+                if (taskEntity != null) {
+                    dataStorageService.updateTask(
+                        userId,
+                        collectionId,
+                        taskEntity.copy(markType = MarkType.Failed)
+                    )
 
-                    } else {
-                        Log.e(TAG, "Task with ID $taskId not found")
-                    }
+                } else {
+                    Log.e(TAG, "Task with ID $taskId not found in collection $collectionId")
                 }
             } finally {
                 pendingResult.finish()

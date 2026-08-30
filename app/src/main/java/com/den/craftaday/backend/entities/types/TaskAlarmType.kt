@@ -30,10 +30,10 @@ sealed class TaskAlarmType {
         val startedAt: Long = System.currentTimeMillis(),
         val duration: Long = System.currentTimeMillis()
     ) : TaskAlarmType()
-    @Stable
-    data class SpecificWeekDay(val dateTimes: List<Long> = emptyList()) : TaskAlarmType()
-    @Stable
-    data class SpecificDate(val dateTimes: List<Long> = emptyList()) : TaskAlarmType()
+//    @Stable
+//    data class SpecificWeekDay(val dateTimes: List<Long> = emptyList()) : TaskAlarmType()
+//    @Stable
+//    data class SpecificDate(val dateTimes: List<Long> = emptyList()) : TaskAlarmType()
 
     val primaryTimestamp: Long
         get() = when (this) {
@@ -42,9 +42,33 @@ sealed class TaskAlarmType {
             is Weekly -> duration
             is Monthly -> duration
             is Yearly -> duration
-            is SpecificWeekDay -> dateTimes.lastOrNull() ?: 0L
-            is SpecificDate -> dateTimes.lastOrNull() ?: 0L
+//            is SpecificWeekDay -> dateTimes.lastOrNull() ?: 0L
+//            is SpecificDate -> dateTimes.lastOrNull() ?: 0L
         }
+
+    fun setStartedAt(startedAt: Long): TaskAlarmType {
+        return when (this) {
+            is Once -> copy(startedAt = startedAt)
+            is Daily -> copy(startedAt = startedAt)
+            is Weekly -> copy(startedAt = startedAt)
+            is Monthly -> copy(startedAt = startedAt)
+            is Yearly -> copy(startedAt = startedAt)
+            //            is SpecificWeekDay -> copy(dateTimes = dateTimes.map { if (it == 0L) startedAt else it })
+            //            is SpecificDate -> copy(dateTimes = dateTimes.map { if (it == 0L) startedAt else it })
+        }
+    }
+
+    fun setDuration(duration: Long): TaskAlarmType {
+        return when (this) {
+            is Once -> copy(duration = duration)
+            is Daily -> copy(duration = duration)
+            is Weekly -> copy(duration = duration)
+            is Monthly -> copy(duration = duration)
+            is Yearly -> copy(duration = duration)
+            //            is SpecificWeekDay -> copy(dateTimes = dateTimes.map { if (it == 0L) duration else it })
+            //            is SpecificDate -> copy(dateTimes = dateTimes.map { if (it == 0L) duration else it })
+        }
+    }
 
     fun toMap(): Map<String, Any> {
         return when (this) {
@@ -53,8 +77,8 @@ sealed class TaskAlarmType {
             is Weekly -> mapOf("weekly" to mapOf("startedAt" to startedAt, "duration" to duration))
             is Monthly -> mapOf("monthly" to mapOf("startedAt" to startedAt, "duration" to duration))
             is Yearly -> mapOf("yearly" to mapOf("startedAt" to startedAt, "duration" to duration))
-            is SpecificWeekDay -> mapOf("specificWeekDay" to dateTimes)
-            is SpecificDate -> mapOf("specificDate" to dateTimes)
+            //            is SpecificWeekDay -> mapOf("specificWeekDay" to dateTimes)
+            //            is SpecificDate -> mapOf("specificDate" to dateTimes)
         }
     }
 
@@ -87,14 +111,15 @@ sealed class TaskAlarmType {
                     startedAt = (map["yearly"] as? Map<*, *>)?.get("startedAt").toLongSafe(),
                     duration = (map["yearly"] as? Map<*, *>)?.get("duration").toLongSafe()
                 )
-                map.containsKey("specificWeekDay") -> SpecificWeekDay(
-                    (map["specificWeekDay"] as List<*>).filterIsInstance<Long>()
-                )
-                map.containsKey("specificDate") -> SpecificDate(
-                    (map["specificDate"] as List<*>).filterIsInstance<Long>()
-                )
+                //            map.containsKey("specificWeekDay") -> SpecificWeekDay(
+                //                (map["specificWeekDay"] as List<*>).filterIsInstance<Long>()
+                //            )
+                //            map.containsKey("specificDate") -> SpecificDate(
+                //                (map["specificDate"] as List<*>).filterIsInstance<Long>()
+                //            )
 
-                else -> { SpecificWeekDay() }
+//                else -> { SpecificWeekDay() }
+                else -> { Once() }
             }
         }
     }

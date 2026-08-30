@@ -3,6 +3,7 @@ package com.den.craftaday.backend.states
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Immutable
 import com.den.craftaday.R
+import com.den.craftaday.backend.entities.TaskEntity
 import com.den.craftaday.backend.entities.types.TaskAlarmType
 
 
@@ -16,4 +17,7 @@ data class TaskState(
     val chosenIcon: Int = R.drawable.ic_task_default,
     val onDescriptionShow: Boolean = false,
     val onTaskAlarmShow: Boolean = false,
+    val onShowDeleteDialog: Boolean = false,
+    val onTaskModification: Boolean = false,
+    val selectedTask: TaskEntity? = null
 )

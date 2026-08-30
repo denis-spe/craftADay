@@ -11,6 +11,14 @@ val String.toTitle: String get() {
     return this.replaceFirstChar { it.uppercase() }
 }
 
+fun String.limitTo(limit: Int): String {
+    return if (this.length > limit) {
+        this.substring(0, limit) + "..."
+    } else {
+        this
+    }
+}
+
 val Long.toLocalTimeDateFormat: String get() {
     val date = java.util.Date(this)
     val format = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss",
